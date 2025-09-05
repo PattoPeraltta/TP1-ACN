@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Optional
 import random
+import numpy as np
 
 
 MINUTOS_OPEN = 6 * 60        # 06:00
@@ -24,10 +25,11 @@ class Plane:
     id: int
     t_spawn: int               # minuto en que apareció
     x: float = 100.0           # distancia inicial (millas nauticas)
-    v_current: float = 0.0     # velocidad actual (kt)
+    v_current: float = 0.0     # velocidad actual (nudos)
     status: Literal["en_fila", "desacelerando", "reinsercion",
                     "desviado", "aterrizado"] = "en_fila"
     eta_estimada: Optional[int] = None
+
 
 
 class Simulator:
@@ -42,41 +44,85 @@ class Simulator:
         random.seed(seed)
 
     def spawn_plane(self):
-        if random.random() < self.lam:
+        if np.random.binomial(1, self.lam) == 1:            # Bernoulli con probabilidad lam de que haya un arribo
             p = Plane(id=self.next_id, t_spawn=self.clock)
+            if next_id > 0:
+                avion_previo = self.planes[next_id - 1]
             self.next_id += 1
-            # velocidad inicial máxima del primer tramo
-            p.v_current = 500
+            p.v_current = np.random.uniform(250, 300)       # velocidad inicial en nudos, la máxima                               
             self.planes.append(p)
+            return True
+        return False
+        
 
     def step(self):
         # 1) posible arribo
-        self.spawn_plane()
+        if(len(self.planes) > 0):
+            ante_ultimo_avion = self.planes[-1]
+            llego_un_avion = self.spawn_plane()
+            ultimo_avion = self.planes[-1]
+        else:
+            llego_un_avion = self.spawn_plane()
+        if(llego_un_avion):
+            ultimo_avion = self.planes[-1]
+        # checkeo velocidades 
+        i=0
+        while(i < len(self.planes)-1 and len(self.planes) > 1):
+            if self.planes[i].status not in ["desacelerando"]:   
+                dx = knots_to_mn_per_min(self.planes[i].v_current)
+                self.planes[i].x = max(0, self.planes[i].x - dx)
+                if self.planes[i].x < 50:
+                    self.planes[i].v_current = np.random.uniform(200, 250)
+                if self.planes[i].x < 15:
+                    self.planes[i].v_current = np.random.uniform(150, 200)
+                if self.planes[i].x < 5:
+                    self.planes[i].v_current = np.random.uniform(120, 150)
+            i += 1
 
-        # 2) actualizar posición de cada avión
-        for p in self.planes:
-            if p.status not in ["en_fila", "desacelerando"]:
-                continue
-            # convertir velocidad actual a mn/min y mover
-            dx = knots_to_mn_per_min(p.v_current)
-            p.x = max(0, p.x - dx)
+        # caso primer avión
+        if(len(self.planes) == 1):
+            dx = knots_to_mn_per_min(self.planes[0].v_current)
+            self.planes[0].x = max(0, self.planes[i].x - dx)
+            if self.planes[i].x < 50:
+                    self.planes[i].v_current = np.random.uniform(200, 250)
+            if self.planes[i].x < 15:
+                self.planes[i].v_current = np.random.uniform(150, 200)
+            if self.planes[i].x < 5:
+                self.planes[i].v_current = np.random.uniform(120, 150)
+            
 
+        dist = ultimo_avion.x - ante_ultimo_avion.x
+        
+        if (llego_un_avion and ultimo_avion.id > 0):
+            if(dist * knots_to_mn_per_min(ultimo_avion.v_current) < 4): # esta a < 4' del siguiente 
+                ultimo_avion.status = "desacelerando"
+
+        # actualizar velocidades de aviones desacelerando
+        i=0
+        while(i < len(self.planes)):
+            if(self.planes[i].status=="desacelerando"):
+                if((planes[i].x - planes[i-1]) * knots_to_mn_per_min(planes[i].v_current) >= 5):
+                    if planes[i].x < 50:
+                        self.planes[i].v_current = 250
+                    if planes[i].x < 15:
+                        self.planes[i].v_current = 200
+                    if planes[i].x < 5:
+                        self.planes[i].v_current = 150
+                    self.planes[i].status = "en_fila"
+                else:
+                    self.planes[i].v_current = self.planes[i-1].v_current - 20
+            i += 1
             # chequeo aterrizaje
-            if p.x <= 0:
-                p.status = "aterrizado"
-                p.eta_estimada = self.clock
+            if self.planes[i].x <= 0:
+                self.planes[i].status = "aterrizado"
+                self.planes[i].eta_estimada = self.clock
 
-        # (acá después vas a meter separación mínima, congestión, reinserción, etc.)
 
     def run(self):
-        while self.clock < MINUTES_CLOSE:
+        while self.clock < MINUTOS_CLOSE:
             self.step()
             self.clock += DT
 
-
-# -------------------
-# MAIN TEST
-# -------------------
 if __name__ == "__main__":
     sim = Simulator(lam=0.1)
     sim.run()
