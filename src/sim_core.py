@@ -24,12 +24,11 @@ def knots_to_mn_per_min(knots: float) -> float:
 class Plane:
     id: int
     t_spawn: int               # minuto en que apareció
-    x: float = 100.0           # distancia inicial (millas nauticas)
+    x: float = 100.0           # posicion actual (arranca a 100 mn de la pista) (mn)
     v_current: float = 0.0     # velocidad actual (nudos)
     status: Literal["en_fila", "desacelerando", "reinsercion",
                     "desviado", "aterrizado"] = "en_fila"
     eta_estimada: Optional[int] = None
-
 
 
 class Simulator:
@@ -56,6 +55,7 @@ class Simulator:
         
 
     def step(self):
+
         # 1) posible arribo
         if(len(self.planes) > 0):
             ante_ultimo_avion = self.planes[-1]
@@ -65,9 +65,11 @@ class Simulator:
             llego_un_avion = self.spawn_plane()
         if(llego_un_avion):
             ultimo_avion = self.planes[-1]
-        # checkeo velocidades 
+
+
+        # 2) checkeo velocidades 
         i=0
-        while(i < len(self.planes)-1 and len(self.planes) > 1):
+        while(i < len(self.planes)-1):
             if self.planes[i].status not in ["desacelerando"]:   
                 dx = knots_to_mn_per_min(self.planes[i].v_current)
                 self.planes[i].x = max(0, self.planes[i].x - dx)
@@ -78,18 +80,6 @@ class Simulator:
                 if self.planes[i].x < 5:
                     self.planes[i].v_current = np.random.uniform(120, 150)
             i += 1
-
-        # caso primer avión
-        if(len(self.planes) == 1):
-            dx = knots_to_mn_per_min(self.planes[0].v_current)
-            self.planes[0].x = max(0, self.planes[i].x - dx)
-            if self.planes[i].x < 50:
-                    self.planes[i].v_current = np.random.uniform(200, 250)
-            if self.planes[i].x < 15:
-                self.planes[i].v_current = np.random.uniform(150, 200)
-            if self.planes[i].x < 5:
-                self.planes[i].v_current = np.random.uniform(120, 150)
-            
 
         dist = ultimo_avion.x - ante_ultimo_avion.x
         
@@ -128,3 +118,8 @@ if __name__ == "__main__":
     sim.run()
     print("Aviones simulados:", len(sim.planes))
     print("Aterrizados:", sum(p.status == "aterrizado" for p in sim.planes))
+
+            
+# 100mn A----------A----------------- Aeropuerto
+#       |          |
+#     ultimo    anteultimo
