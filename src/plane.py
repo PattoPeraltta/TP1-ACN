@@ -24,6 +24,12 @@ class Plane:
         mix_speed = u.velocidad_permitida(self.x)[0]
         return mix_speed
 
+    def get_status(self):
+        return self.status
+    
+    def get_id(self):
+        return self.id
+
     # Pongo una velocidad al avion respetando los limites del rango
     def set_speed(self):
         self.v = u.random_uniform(self.min_speed(),self.max_speed())
@@ -41,7 +47,6 @@ class Plane:
                 return dmax
         return c.rangos[-1][1]
 
-    
     # Actualizacion de la estimacion de llegada (muy basica)  Falta: Actualizar con la funcion rango_actual()
     def time_to_arrive(self):
         lista_rangos = c.LISTA_RANGOS
@@ -69,7 +74,6 @@ class Plane:
             return True
         return False
 
-
     # Hace avanzar al avion, calcula nuevo rango y se fija si hay que desacelerar 
     def avanzar(self,other,third):
         # Si ya aterizo no hago nada
@@ -85,7 +89,8 @@ class Plane:
         if self.status == "desviado":
             self.retroceder(other,third)
             return
-        
+        if self.status == "reinsercion":
+            self.status = "en_fila"
         rango_antes = self.rango_actual()
         # Calculo la nueva pocicion
         self.x -= self.v/60 * c.DT
@@ -107,7 +112,6 @@ class Plane:
             self.status = "en_fila"
             self.set_speed()
 
-
     # Setea el desacelerado
     def set_desacelerando(self,other):
         self.v = other.v - 20
@@ -117,14 +121,11 @@ class Plane:
             self.status = "desacelerando"
             self.time_to_arrive()
 
-
     #  Funcion para desviar al avion, no avanzo porque en la primera que gira no puede avanzar
     def set_desviado(self):
         self.status = "desviado"
         self.v = 200
         self.tiempo_estimado = -1 # Pongo en -1 porque no se pouede calcular cuanto va a tardar
-
-
 
     # Calculo la distancia que se movio el avion
     def step(self,other,third):
