@@ -54,39 +54,31 @@ class Plane:
         if other is None:
             return False
         
-        # ✅ Verificar que other esté realmente adelante (más cerca del aeropuerto)
+        # Verificar que other esté realmente adelante
         if other.x >= self.x:
-            return False  # other no está adelante
+            return False
         
-        # ✅ Calcular distancia real entre aviones
-        distancia_actual = self.x - other.x  # Siempre positiva si other está adelante
+        # Calcular distancia física actual
+        distancia_actual = self.x - other.x  # en millas náuticas
         
-        # ✅ Calcular tiempo que tardará self en alcanzar la posición actual de other
-        # Asumiendo que other mantiene su velocidad
-        if self.v <= other.v:
-            return False  # self no alcanzará a other
+        # Convertir a tiempo basado en la velocidad actual de self
+        # Si self mantiene su velocidad actual, ¿cuánto tardará en alcanzar donde está other ahora?
+        tiempo_para_alcanzar = distancia_actual / (self.v / 60)  # en minutos
         
-        velocidad_relativa = self.v - other.v  # velocidad de acercamiento
-        tiempo_alcance = distancia_actual / (velocidad_relativa / 60)  # en minutos
-        
-        return tiempo_alcance < 4
+        # Considerar "muy cerca" si está a menos de 4 minutos con su velocidad actual
+        return tiempo_para_alcanzar < 4
 
     def distancia_mayor_5(self, other):
         if other is None:
             return True
         
         if other.x >= self.x:
-            return True  # other no está adelante
+            return True
         
         distancia_actual = self.x - other.x
+        tiempo_para_alcanzar = distancia_actual / (self.v / 60)
         
-        if self.v <= other.v:
-            return True  # self no alcanzará a other
-        
-        velocidad_relativa = self.v - other.v
-        tiempo_alcance = distancia_actual / (velocidad_relativa / 60)
-        
-        return tiempo_alcance > 5
+        return tiempo_para_alcanzar > 5
 
     # Actualizacion de la estimacion de llegada (muy basica)  Falta: Actualizar con la funcion rango_actual()
     def time_to_arrive(self):
@@ -131,16 +123,22 @@ class Plane:
         if rango_antes != self.rango_actual():
             self.set_speed()
             
-        # verificar si debe desacelerar por estar muy cerca del avion de adelante
-        # esto aplica sin importar el estado del avion de adelante (excepto si es desviado)
-        if (other is not None and other.status != "desviado" and other.x < self.x and self.status != "desacelerando" and  self.distancia_menor_4(other)):
+        if (other is not None and 
+            other.status != "desviado" and 
+            other.x < self.x and 
+            self.distancia_menor_4(other)):
             self.set_desacelerando(other)
             return
-    
-    # ✅ Verificar si puede volver a velocidad máxima
-        elif (self.status == "desacelerando" and (other is None or other.x >= self.x or other.status == "desviado" or  self.distancia_mayor_5(other))):
+
+        # Verificar si puede volver a velocidad máxima
+        elif (self.status == "desacelerando" and 
+            (other is None or 
+            other.x >= self.x or 
+            other.status == "desviado" or 
+            self.distancia_mayor_5(other))):
             self.set_max_speed()
-            self.time_to_arrive()
+
+        self.time_to_arrive()
             
     # hace retroceder al avion desviado y evalua reinsercion
     def retroceder(self,other,third):
