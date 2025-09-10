@@ -5,9 +5,7 @@ rangos = [
     (5, 15, (150, 200)),               # 15 a 5 mn
     (0, 5, (120, 150))                 # 5 a aterrizaje
 ]
-
 MINUTOS_OPEN = 6 * 60        # 06:00
 MINUTOS_CLOSE = 24 * 60      # 00:00
 DT = 1                       # paso temporal en minutos
-
 LISTA_RANGOS = (5,15,50,100)

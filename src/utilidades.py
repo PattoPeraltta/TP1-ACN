@@ -5,17 +5,18 @@ import numpy as np
 def knots_to_mn_per_min(knots: float) -> float:
     return knots / 60.0
 
-# Ver en que intervalo esta
+# devuelve rango de velocidades permitidas con forma de tupla (vmin, vmax)
 def velocidad_permitida(distancia):
     for dmin, dmax, rango in c.rangos:
         if dmin <= distancia < dmax:
             return rango
     return None
 
-# Dar un valor de uniforme en el rango x,y
+# dar un valor de uniforme en el rango x,y
 def random_uniform(x,y):
     numero_random = np.random.uniform(x, y)
     return numero_random
 
 def tiempo_min_para_mn(nudos,mn):
     return 60 * mn /nudos
+
