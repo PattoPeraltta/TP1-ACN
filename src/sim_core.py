@@ -12,7 +12,7 @@ class simulacion:
     lambda_param: float  # probabilidad de arribo por minuto
     dias_simulacion: int    # cantidad de dias a simular
     aviones: List[Plane] = None  # lista de aviones en el sistema
-    tiempo_actual: int = 0       # tiempo actual de la simulacion en minutos
+    tiempo_actual: int = 350       # tiempo actual de la simulacion en minutos
     aviones_aterrizados: List[Plane] = None  # aviones que ya aterrizaron
     aviones_desviados: List[Plane] = None    # aviones que se fueron a montevideo
     estadisticas: dict = None    # diccionario con estadisticas de la simulacion
@@ -36,6 +36,11 @@ class simulacion:
                 'desvios_a_montevideo': 0,
                 'dias_completados': 0
             }
+
+        # sistema de interpolacion para movimiento suave
+        self.aviones_anterior = []  # posiciones anteriores para interpolacion
+        self.frame_interpolacion = 0  # frame actual de interpolacion
+        self.frames_por_paso = 8  # cuantos frames visuales por paso de simulacion
 
     def esta_aeropuerto_abierto(self) -> bool:
         """verifica si el aeropuerto esta abierto en el tiempo actual"""
@@ -72,6 +77,8 @@ class simulacion:
                 self.estadisticas['total_aviones'] += 1
                 return True
         return False
+    
+
 
     def ordenar_aviones_por_distancia(self):
         """ordena los aviones por distancia al aeropuerto (mas cerca primero)"""

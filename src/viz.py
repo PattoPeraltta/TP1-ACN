@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 from sim_core import simulacion
+from plane import Plane
 import const as c
 
 class visualizador_videojuego:
@@ -17,6 +18,11 @@ class visualizador_videojuego:
         self.velocidad_animacion_abierto = 3   # frames por segundo cuando abierto (1 min = 3 seg)
         self.pasos_por_frame_cerrado = 10  # mas pasos por frame cuando cerrado para ir mas rapido
         self.pasos_por_frame_abierto = 1   # menos pasos por frame cuando abierto para ir mas lento
+        
+        # sistema de interpolacion para movimiento suave
+        self.aviones_anterior = []  # posiciones anteriores para interpolacion
+        self.frame_interpolacion = 0  # frame actual de interpolacion
+        self.frames_por_paso = 8  # cuantos frames visuales por paso de simulacion
         
         # colores para diferentes estados
         self.colores_estado = {
@@ -66,6 +72,40 @@ class visualizador_videojuego:
                                        verticalalignment='top', horizontalalignment='right', fontsize=10,
                                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8))
         
+    def obtener_aviones_interpolados(self):
+        """retorna posiciones interpoladas de los aviones para movimiento suave"""
+        if not self.aviones_anterior or not self.sim.aviones:
+            return self.sim.aviones
+        
+        # calcular factor de interpolacion (0 = posicion anterior, 1 = posicion actual)
+        factor = self.frame_interpolacion / self.frames_por_paso
+        
+        aviones_interpolados = []
+        for avion_actual in self.sim.aviones:
+            # buscar avion correspondiente en la posicion anterior
+            avion_anterior = None
+            for avion_ant in self.aviones_anterior:
+                if avion_ant.id == avion_actual.id:
+                    avion_anterior = avion_ant
+                    break
+            
+            if avion_anterior:
+                # crear avion interpolado
+                avion_interp = Plane(
+                    id=avion_actual.id,
+                    t_spawn=avion_actual.t_spawn,
+                    x=avion_anterior.x + (avion_actual.x - avion_anterior.x) * factor,
+                    v=avion_actual.v,  # velocidad actual
+                    status=avion_actual.status,
+                    tiempo_estimado=avion_actual.tiempo_estimado
+                )
+                aviones_interpolados.append(avion_interp)
+            else:
+                # si no hay posicion anterior, usar posicion actual
+                aviones_interpolados.append(avion_actual)
+        
+        return aviones_interpolados
+        
     def limpiar_aviones_y_etiquetas(self):
         """limpia todos los aviones y etiquetas del grafico"""
         # limpiar aviones anteriores
@@ -83,11 +123,14 @@ class visualizador_videojuego:
         # limpiar aviones y etiquetas anteriores
         self.limpiar_aviones_y_etiquetas()
         
-        if not self.sim.aviones:
+        # obtener aviones interpolados para movimiento suave
+        aviones_a_dibujar = self.obtener_aviones_interpolados()
+        
+        if not aviones_a_dibujar:
             return
             
         # dibujar cada avion
-        for i, avion in enumerate(self.sim.aviones):
+        for i, avion in enumerate(aviones_a_dibujar):
             color = self.colores_estado.get(avion.status, '#000000')
             
             # posicion y: todos en la misma fila excepto los desviados que van arriba
@@ -160,12 +203,23 @@ class visualizador_videojuego:
             return self.pasos_por_frame_cerrado
     
     def animar(self, frame):
-        """funcion de animacion principal"""
-        # determinar cuantos pasos procesar segun el estado del aeropuerto
-        pasos_a_procesar = self.obtener_pasos_por_frame()
-        
-        # procesar pasos de simulacion
-        for _ in range(pasos_a_procesar):
+        """funcion de animacion principal con interpolacion suave"""
+        # si es el primer frame de interpolacion, procesar paso de simulacion
+        if self.frame_interpolacion == 0:
+            # guardar posiciones anteriores
+            self.aviones_anterior = []
+            for avion in self.sim.aviones:
+                avion_copia = Plane(
+                    id=avion.id,
+                    t_spawn=avion.t_spawn,
+                    x=avion.x,
+                    v=avion.v,
+                    status=avion.status,
+                    tiempo_estimado=avion.tiempo_estimado
+                )
+                self.aviones_anterior.append(avion_copia)
+            
+            # procesar paso de simulacion
             if self.sim.tiempo_actual < self.sim.dias_simulacion * 1440:
                 self.sim.procesar_paso_temporal()
             else:
@@ -173,12 +227,17 @@ class visualizador_videojuego:
                 self.mostrar_estadisticas_finales()
                 return
         
-        # actualizar visualizacion
+        # actualizar visualizacion con interpolacion
         self.dibujar_aviones()
         self.actualizar_informacion()
         
+        # avanzar frame de interpolacion
+        self.frame_interpolacion += 1
+        if self.frame_interpolacion >= self.frames_por_paso:
+            self.frame_interpolacion = 0
+        
         # mostrar progreso cada 1000 pasos
-        if self.sim.tiempo_actual % 1000 == 0:
+        if self.sim.tiempo_actual % 1000 == 0 and self.frame_interpolacion == 0:
             print(f"progreso: dia {self.sim.dia_actual}, hora {self.sim.obtener_hora_actual()}, aviones: {len(self.sim.aviones)}")
     
     def mostrar_estadisticas_finales(self):
@@ -209,13 +268,13 @@ class visualizador_videojuego:
         print("iniciando visualizacion tipo videojuego...")
         print("presiona ctrl+c para detener")
         print("la simulacion corre automaticamente dia tras dia")
-        print("velocidad: 1 minuto = 3 segundos cuando el aeropuerto esta abierto")
-        print("velocidad: 10x mas rapido cuando el aeropuerto esta cerrado")
+        print("movimiento completamente suave con interpolacion")
+        print("velocidad: 1 minuto de simulacion = 8 frames visuales (rapido y suave)")
         
         try:
-            # crear animacion con velocidad fija pero pasos variables
+            # crear animacion con interpolacion suave (30 FPS)
             anim = animation.FuncAnimation(self.fig, self.animar, 
-                                         interval=1000//self.velocidad_animacion_abierto, 
+                                         interval=33,  # ~30 FPS para movimiento suave
                                          blit=False, repeat=False, cache_frame_data=False)
             
             plt.tight_layout()

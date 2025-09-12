@@ -1,3 +1,5 @@
 ve/
 .venv/
 venv/
+*.pyc
+src/__pycache__/
