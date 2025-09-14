@@ -3,13 +3,19 @@ import matplotlib.animation as animation
 import numpy as np
 from sim_core import simulacion
 from plane import Plane
+from utilidades import ask_bool, ask_pos_int, ask_prob_01
 import const as c
 
 class visualizador_videojuego:
     """visualizador tipo videojuego para la simulacion de aviones"""
     
-    def __init__(self, lambda_param: float, dias_simulacion: int = 3):
-        self.sim = simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion)
+    def __init__(self, lambda_param: float, dias_simulacion: int = 3, viento: bool = False, p_go: float = 0.10,
+                 tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30):
+        self.sim = simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion, viento_activo=viento,
+                              p_goaround=p_go,
+                              storm_activa=tormenta,
+                              storm_prob=p_tormenta,
+                              storm_duracion_min=t_dur)
         self.fig, self.ax = plt.subplots(figsize=(14, 8))
         self.setup_plot()
         
@@ -171,10 +177,18 @@ class visualizador_videojuego:
         
         estado_aeropuerto = "abierto" if aeropuerto_abierto else "cerrado"
         
-        info_text = f"dia: {dia_actual}\n"
-        info_text += f"hora: {hora_actual}\n"
-        info_text += f"aeropuerto: {estado_aeropuerto}\n"
-        info_text += f"lambda: {self.sim.lambda_param:.4f}"
+        info_text = (
+            f"dia: {dia_actual}\n"
+            f"hora: {hora_actual}\n"
+            f"aeropuerto: {estado_aeropuerto}\n"
+            f"lambda: {self.sim.lambda_param:.4f}\n"
+            f"viento: {'on' if self.sim.viento_activo else 'off'} "
+            f"(p de desvio = {self.sim.p_goaround:.2f})\n"
+            f"tormenta: {'on' if self.sim.storm_activa else 'off'} "
+            f"({(self.sim.storm_inicio_min or 0)//60:02d}:{(self.sim.storm_inicio_min or 0)%60:02d}"
+            f"-{((self.sim.storm_inicio_min or 0)+self.sim.storm_duracion_min)%1440//60:02d}:"
+            f"{((self.sim.storm_inicio_min or 0)+self.sim.storm_duracion_min)%60:02d})"
+        )
         
         self.texto_info.set_text(info_text)
         
@@ -183,7 +197,10 @@ class visualizador_videojuego:
         stats_text = f"aviones activos: {len(self.sim.aviones)}\n"
         stats_text += f"total generados: {stats['total_aviones']}\n"
         stats_text += f"aterrizados: {stats['aterrizados']}\n"
-        stats_text += f"desviados: {stats['desviados']}\n"
+        stats_text += f"desviados por congestion: {stats['desviados']}\n"
+        stats_text += f"desvios por viento: {stats['desvios_viento']}\n"
+        stats_text += f"desvios por tormenta: {stats['desvios_tormenta']}\n"
+        stats_text += f"desvios por cierre: {stats['desvios_cierre']}\n"
         stats_text += f"desvios a montevideo: {stats['desvios_a_montevideo']}"
         
         self.texto_stats.set_text(stats_text)
@@ -253,6 +270,10 @@ class visualizador_videojuego:
         print(f"total de aviones generados: {stats['total_aviones']}")
         print(f"aviones aterrizados: {stats['aterrizados']}")
         print(f"aviones desviados: {stats['desviados']}")
+        print(f"desviados por congestion: {stats['desviados']}")
+        print(f"desvios por viento: {stats['desvios_viento']}")
+        print(f"desvios por tormenta: {stats['desvios_tormenta']}")
+        print(f"desvios por cierre: {stats['desvios_cierre']}")
         print(f"desvios a montevideo: {stats['desvios_a_montevideo']}")
         print(f"tiempo promedio de aterrizaje: {stats['tiempo_promedio_aterrizaje']:.2f} minutos")
         
@@ -335,8 +356,15 @@ def main():
     if opcion == "1":
         lambda_param = float(input("ingresa lambda (ej: 0.0167 para 1 avion/hora): "))
         dias_simulacion = int(input("ingresa cantidad de dias a simular (ej: 3): "))
+        dia_ventoso = ask_bool("ingresa 'True' si los dias son ventosos (si no 'False'): ")
+        p_go = ask_prob_01("ingresa probabilidad de go-around por viento (0-1): ") if dia_ventoso else 0.0
+
+        tormenta = ask_bool("ingresa 'True' si puede haber tormenta (si no 'False'): ")
+        p_tormenta = ask_prob_01("ingresa probabilidad diaria de tormenta (0-1): ") if tormenta else 0.0
+        tiempo = ask_pos_int("ingresa duración (en minutos) de cada tormenta: ") if tormenta else 0
         
-        viz = visualizador_videojuego(lambda_param, dias_simulacion)
+        viz = visualizador_videojuego(lambda_param, dias_simulacion, viento=dia_ventoso, p_go=p_go,
+                                  tormenta=tormenta, p_tormenta=p_tormenta, t_dur=tiempo)
         viz.ejecutar_visualizacion()
         
     elif opcion == "2":
@@ -346,9 +374,16 @@ def main():
         lambda_param = float(input("ingresa lambda: "))
         dias_simulacion = int(input("ingresa cantidad de dias: "))
         num_sims = int(input("ingresa numero de simulaciones: "))
+        dia_ventoso = ask_bool("ingresa 'True' si los dias son ventosos (si no 'False'): ")
+        p_go = ask_prob_01("ingresa probabilidad de go-around por viento (0-1): ") if dia_ventoso else 0.0
+
+        tormenta = ask_bool("ingresa 'True' si puede haber tormenta (si no 'False'): ")
+        p_tormenta = ask_prob_01("ingresa probabilidad diaria de tormenta (0-1): ") if tormenta else 0.0
+        tiempo = ask_pos_int("ingresa duración (en minutos) de cada tormenta: ") if tormenta else 0
         
         from sim_core import ejecutar_multiples_simulaciones
-        stats = ejecutar_multiples_simulaciones(lambda_param, dias_simulacion, num_sims)
+        stats = ejecutar_multiples_simulaciones(lambda_param, dias_simulacion, num_sims,viento_activo=dia_ventoso, p_goaround=p_go,
+                                                storm_activa=tormenta, storm_prob=p_tormenta, storm_duracion_min=tiempo)
         print("\nestadisticas finales:")
         for key, value in stats.items():
             print(f"{key}: {value['promedio']:.2f} ± {value['error_estandar']:.2f}")
@@ -358,4 +393,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-#caca

@@ -20,3 +20,27 @@ def random_uniform(x,y):
 def tiempo_min_para_mn(nudos,mn):
     return 60 * mn /nudos
 
+def ask_bool(prompt: str) -> bool:
+    s = input(prompt).strip().lower()
+    return s in {"true", "t", "1", "si", "sí", "y", "s"}
+
+def ask_prob_01(prompt: str) -> float:
+    while True:
+        try:
+            p = float(input(prompt).strip())
+            if 0.0 <= p <= 1.0:
+                return p
+        except ValueError:
+            pass
+        print("⚠️ Ingresá un número entre 0 y 1.")
+
+def ask_pos_int(prompt: str) -> int:
+    while True:
+        try:
+            x = int(input(prompt).strip())
+            if x > 0:
+                return x
+        except ValueError:
+            pass
+        print("⚠️ Ingresá un entero positivo.")
+

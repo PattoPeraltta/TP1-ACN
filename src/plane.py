@@ -13,6 +13,7 @@ class Plane:
     v: float = 0.0            # Velocidad del avion en nudos
     status: Status = "en_fila"              # Estado del avion
     tiempo_estimado: Optional[int] = None   # Estimacion simple de arribo en min
+    minutos_bloqueo:int = 0
 
     # velocidad maxima dada el rango en el que esta
     def max_speed(self):
@@ -141,51 +142,37 @@ class Plane:
         self.time_to_arrive()
             
     # hace retroceder al avion desviado y evalua reinsercion
-    def retroceder(self,other,third):
-        # el avion desviado se mueve en direccion opuesta (alejandose del aeropuerto)
-        self.x += self.v/60 * c.DT
-        
-        # caso 1: hay un gap entre dos aviones en la fila
+    def retroceder(self, other, third):
+        # 1) alejarse (desviado)
+        self.x += (self.v / 60.0) * c.DT
+
+        # 2) bloqueo activo: consumir y no intentar reinserción
+        if self.minutos_bloqueo > 0:
+            self.minutos_bloqueo = max(0, self.minutos_bloqueo - c.DT)
+            return
+
+        # 3) gap entre dos aviones (other = adelante, third = atrás)
         if other is not None and third is not None:
-            # calcular la distancia entre el avion de adelante y el de atras
-            distancia_gap = other.x - third.x
-            
-            # si hay un gap de al menos 10 minutos entre los aviones en la fila
-            if distancia_gap >= self.v/60 * 10:
-                # calcular el punto medio del gap
-                punto_medio_gap = third.x + distancia_gap / 2
-                
-                # verificar si este avion desviado puede reinsertarse
-                # debe estar en la primera mitad del gap (entre third.x y el punto medio)
-                if third.x < self.x <= punto_medio_gap:
-                    # posicionar exactamente en el medio del gap
-                    self.x = punto_medio_gap
+            distancia_gap = third.x - other.x  # OJO: signo correcto
+            if distancia_gap >= (self.v / 60.0) * 10.0:
+                punto_medio = other.x + distancia_gap / 2.0
+                # reinsertar solo si caigo en la mitad trasera y quedo > 5 mn de AEP
+                if other.x < self.x <= punto_medio and punto_medio > 5.0:
+                    self.x = punto_medio
                     self.status = "reinsercion"
-                    # samplear velocidad segun el rango de la nueva posicion
                     self.set_speed()
-                    return
-        
-        # caso 2: hay un gap entre el ultimo avion y las 100 millas nauticas
-        elif other is not None and third is None:
-            # calcular la distancia desde el ultimo avion hasta las 100mn
+            return
+
+        # 4) gap entre el último avión y las 100 mn
+        if other is not None and third is None:
             distancia_gap = 100.0 - other.x
-            
-            # si hay un gap de al menos 10 minutos
-            if distancia_gap >= self.v/60 * 10:
-                # calcular el punto medio del gap
-                punto_medio_gap = other.x + distancia_gap / 2
-                
-                # verificar si este avion desviado puede reinsertarse
-                # debe estar en la primera mitad del gap (entre other.x y el punto medio)
-                if other.x < self.x <= punto_medio_gap:
-                    # posicionar exactamente en el medio del gap
-                    self.x = punto_medio_gap
+            if distancia_gap >= (self.v / 60.0) * 10.0:
+                punto_medio = other.x + distancia_gap / 2.0
+                if other.x < self.x <= punto_medio and punto_medio > 5.0:
+                    self.x = punto_medio
                     self.status = "reinsercion"
-                    # samplear velocidad segun el rango de la nueva posicion
                     self.set_speed()
-                    return
-        
-        return
+        # si no hay referencias, no reinsertar
 
     # setea el avion como desacelerando
     def set_desacelerando(self,other):
