@@ -12,7 +12,7 @@ class Simulacion:
     dias_simulacion: int    # cantidad de dias a simular
 
     aviones: List[Plane] = None  # lista de aviones en el sistema
-    tiempo_actual: int = 1380       # tiempo actual de la simulacion en minutos
+    tiempo_actual: int = 350       # tiempo actual de la simulacion en minutos
     aviones_aterrizados: List[Plane] = None  # aviones que ya aterrizaron
     aviones_desviados: List[Plane] = None    # aviones que se fueron a montevideo
     estadisticas: dict = None    # diccionario con estadisticas de la simulacion

@@ -107,15 +107,31 @@ class visualizador_videojuego:
                     break
             
             if avion_anterior:
-                # crear avion interpolado
-                avion_interp = Plane(
-                    id=avion_actual.id,
-                    t_spawn=avion_actual.t_spawn,
-                    x=avion_anterior.x + (avion_actual.x - avion_anterior.x) * factor,
-                    v=avion_actual.v,  # velocidad actual
-                    status=avion_actual.status,
-                    tiempo_estimado=avion_actual.tiempo_estimado
-                )
+                # detectar si hubo un salto de posicion (reinsercion)
+                distancia_salto = abs(avion_actual.x - avion_anterior.x)
+                es_reinsercion = (distancia_salto > 5.0 or  # salto grande de posicion
+                                avion_anterior.status == "desviado" and avion_actual.status == "reinsercion")
+                
+                if es_reinsercion:
+                    # para reinsercion, usar directamente la posicion actual sin interpolacion
+                    avion_interp = Plane(
+                        id=avion_actual.id,
+                        t_spawn=avion_actual.t_spawn,
+                        x=avion_actual.x,
+                        v=avion_actual.v,
+                        status=avion_actual.status,
+                        tiempo_estimado=avion_actual.tiempo_estimado
+                    )
+                else:
+                    # interpolacion normal para movimiento continuo
+                    avion_interp = Plane(
+                        id=avion_actual.id,
+                        t_spawn=avion_actual.t_spawn,
+                        x=avion_anterior.x + (avion_actual.x - avion_anterior.x) * factor,
+                        v=avion_actual.v,  # velocidad actual
+                        status=avion_actual.status,
+                        tiempo_estimado=avion_actual.tiempo_estimado
+                    )
                 aviones_interpolados.append(avion_interp)
             else:
                 # si no hay posicion anterior, usar posicion actual
