@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.widgets import Slider, Button
 import numpy as np
-from sim_core import simulacion
+import time
+from sim_core import Simulacion
 from plane import Plane
 from utilidades import ask_bool, ask_pos_int, ask_prob_01
 import const as c
@@ -19,16 +21,8 @@ class visualizador_videojuego:
         self.fig, self.ax = plt.subplots(figsize=(14, 8))
         self.setup_plot()
         
-        # configuracion de animacion
-        self.velocidad_animacion_cerrado = 50  # frames por segundo cuando cerrado (mucho mas rapido)
-        self.velocidad_animacion_abierto = 3   # frames por segundo cuando abierto (1 min = 3 seg)
-        self.pasos_por_frame_cerrado = 10  # mas pasos por frame cuando cerrado para ir mas rapido
-        self.pasos_por_frame_abierto = 1   # menos pasos por frame cuando abierto para ir mas lento
-        
         # sistema de interpolacion para movimiento suave
         self.aviones_anterior = []  # posiciones anteriores para interpolacion
-        self.frame_interpolacion = 0  # frame actual de interpolacion
-        self.frames_por_paso = 8  # cuantos frames visuales por paso de simulacion
         
         # colores para diferentes estados
         self.colores_estado = {
@@ -38,9 +32,23 @@ class visualizador_videojuego:
             'desviado': '#ff0000',      # rojo
             'aterrizado': '#888888'     # gris
         }
+
+        # controles de velocidad y play/pausa
+        self.velocidad_multiplier = 1.0
+        self.paused = False
+        self.slider_velocidad = None
+        self.pause_button = None
+        
+        # control de tiempo para velocidad de simulacion
+        self.ultimo_tiempo_simulacion = time.time()
+        self.intervalo_simulacion_base = 0.5  # 100ms entre pasos de simulacion (10 pasos/segundo)
+        self.tiempo_acumulado = 0.0
+
+        self.setup_controls()
         
     def setup_plot(self):
         """configura el grafico principal"""
+        self.fig.subplots_adjust(bottom=0.15)
         self.ax.set_xlim(-10, 110)  # espacio extra para aviones desviados
         self.ax.set_ylim(-2, 2)
         self.ax.set_xlabel('distancia al aeropuerto (millas nauticas)', fontsize=12)
@@ -48,15 +56,17 @@ class visualizador_videojuego:
         self.ax.set_title('simulacion de aproximacion de aviones - aep', fontsize=14, fontweight='bold')
         self.ax.grid(True, alpha=0.3)
         
+        self.ax.grid(True, alpha=0.3)
+
         # dibujar pista de aterrizaje
         self.ax.axvline(x=0, color='black', linewidth=3, label='pista de aterrizaje')
         
         # dibujar rangos de velocidad con colores
-        colores_rangos = ['#ffcccc', '#ffe6cc', '#ffffcc', '#e6ffcc', '#ccffcc']
+        colores_rangos = ['#ffffff', '#ffcccc', '#ffe6cc', '#fafaaf', '#ccffcc']
         for i, (dmin, dmax, _) in enumerate(c.rangos):
             if dmax == float('inf'):
                 dmax = 100
-            self.ax.axvspan(dmin, dmax, alpha=0.2, color=colores_rangos[i])
+            self.ax.axvspan(dmin, dmax, alpha=0.8, color=colores_rangos[i])
             
             # etiquetas de rangos
             if dmax != 100:
@@ -83,8 +93,9 @@ class visualizador_videojuego:
         if not self.aviones_anterior or not self.sim.aviones:
             return self.sim.aviones
         
-        # calcular factor de interpolacion (0 = posicion anterior, 1 = posicion actual)
-        factor = self.frame_interpolacion / self.frames_por_paso
+        # calcular factor de interpolacion basado en tiempo acumulado
+        intervalo_requerido = self.intervalo_simulacion_base / self.velocidad_multiplier
+        factor = min(1.0, self.tiempo_acumulado / intervalo_requerido)
         
         aviones_interpolados = []
         for avion_actual in self.sim.aviones:
@@ -205,25 +216,25 @@ class visualizador_videojuego:
         
         self.texto_stats.set_text(stats_text)
     
-    def obtener_intervalo_animacion(self):
-        """retorna el intervalo de animacion en milisegundos segun el estado del aeropuerto"""
-        if self.sim.esta_aeropuerto_abierto():
-            return 1000 // self.velocidad_animacion_abierto  # mas lento cuando abierto
-        else:
-            return 1000 // self.velocidad_animacion_cerrado  # mas rapido cuando cerrado
-    
-    def obtener_pasos_por_frame(self):
-        """retorna cuantos pasos de simulacion procesar por frame segun el estado del aeropuerto"""
-        if self.sim.esta_aeropuerto_abierto():
-            return self.pasos_por_frame_abierto
-        else:
-            return self.pasos_por_frame_cerrado
     
     def animar(self, frame):
         """funcion de animacion principal con interpolacion suave"""
-        # si es el primer frame de interpolacion, procesar paso de simulacion
-        if self.frame_interpolacion == 0:
-            # guardar posiciones anteriores
+        if self.paused:
+            return
+
+        tiempo_actual = time.time()
+        delta_tiempo = tiempo_actual - self.ultimo_tiempo_simulacion
+        self.ultimo_tiempo_simulacion = tiempo_actual
+        
+        # acumular tiempo y procesar pasos de simulacion segun la velocidad
+        self.tiempo_acumulado += delta_tiempo
+        intervalo_requerido = self.intervalo_simulacion_base / self.velocidad_multiplier
+        
+        # procesar pasos de simulacion si ha pasado suficiente tiempo
+        while self.tiempo_acumulado >= intervalo_requerido:
+            self.tiempo_acumulado -= intervalo_requerido
+            
+            # guardar posiciones anteriores para interpolacion
             self.aviones_anterior = []
             for avion in self.sim.aviones:
                 avion_copia = Plane(
@@ -244,18 +255,9 @@ class visualizador_videojuego:
                 self.mostrar_estadisticas_finales()
                 return
         
-        # actualizar visualizacion con interpolacion
+        # actualizar visualizacion con interpolacion (siempre, para movimiento suave)
         self.dibujar_aviones()
         self.actualizar_informacion()
-        
-        # avanzar frame de interpolacion
-        self.frame_interpolacion += 1
-        if self.frame_interpolacion >= self.frames_por_paso:
-            self.frame_interpolacion = 0
-        
-        # mostrar progreso cada 1000 pasos
-        if self.sim.tiempo_actual % 1000 == 0 and self.frame_interpolacion == 0:
-            print(f"progreso: dia {self.sim.dia_actual}, hora {self.sim.obtener_hora_actual()}, aviones: {len(self.sim.aviones)}")
     
     def mostrar_estadisticas_finales(self):
         """muestra las estadisticas finales cuando termina la simulacion"""
@@ -287,23 +289,53 @@ class visualizador_videojuego:
     def ejecutar_visualizacion(self):
         """ejecuta la visualizacion tipo videojuego"""
         print("iniciando visualizacion tipo videojuego...")
-        print("presiona ctrl+c para detener")
-        print("la simulacion corre automaticamente dia tras dia")
-        print("movimiento completamente suave con interpolacion")
-        print("velocidad: 1 minuto de simulacion = 8 frames visuales (rapido y suave)")
         
         try:
-            # crear animacion con interpolacion suave (30 FPS)
+            # crear animacion con interpolacion suave
+            # usar intervalo fijo y controlar velocidad con el multiplicador
             anim = animation.FuncAnimation(self.fig, self.animar, 
                                          interval=33,  # ~30 FPS para movimiento suave
                                          blit=False, repeat=False, cache_frame_data=False)
             
-            plt.tight_layout()
+            # plt.tight_layout()
             plt.show()
             
         except KeyboardInterrupt:
             print("\nvisualizacion detenida por el usuario")
             self.mostrar_estadisticas_finales()
+
+    def setup_controls(self):
+        """agrega controles interactivos de velocidad, play/pausa y reset"""
+        # slider horizontal de velocidad
+        ax_speed = plt.axes([0.15, 0.02, 0.3, 0.03])
+        self.slider_velocidad = Slider(ax_speed, 'Velocidad', 0.1, 20.0, valinit=1.0)
+        self.slider_velocidad.on_changed(self.cambiar_velocidad)
+
+        # botón de play/pausa
+        ax_pause = plt.axes([0.50, 0.02, 0.08, 0.03])
+        self.pause_button = Button(ax_pause, 'Pausa')
+        self.pause_button.on_clicked(self.toggle_pause)
+
+        # boton de reset
+        ax_reset = plt.axes([0.60, 0.02, 0.08, 0.03])
+        self.reset_button = Button(ax_reset, 'Reset')
+        self.reset_button.on_clicked(self.reset_velocidad)
+
+    def cambiar_velocidad(self, val):
+        """se llama cuando se modifica el slider de velocidad"""
+        self.velocidad_multiplier = val
+    
+    def toggle_pause(self, event):
+        """toggle de play/pausa"""
+        self.paused = not self.paused
+        self.pause_button.label.set_text('Reanudar' if self.paused else 'Pausa')
+
+    def reset_velocidad(self, event):
+        """resetea la velocidad a 1.0 y reanuda"""
+        self.velocidad_multiplier = 1.0
+        self.paused = False
+        self.slider_velocidad.reset()
+        self.pause_button.label.set_text('Pausa')
 
 def ejecutar_analisis_completo():
     """ejecuta el analisis completo segun la consigna"""

@@ -6,13 +6,13 @@ import const as c
 from plane import Plane
 
 @dataclass
-class simulacion:
+class Simulacion:
     """clase principal para manejar la simulacion de monte carlo por dias"""
     lambda_param: float  # probabilidad de arribo por minuto
     dias_simulacion: int    # cantidad de dias a simular
 
     aviones: List[Plane] = None  # lista de aviones en el sistema
-    tiempo_actual: int = 350       # tiempo actual de la simulacion en minutos
+    tiempo_actual: int = 1380       # tiempo actual de la simulacion en minutos
     aviones_aterrizados: List[Plane] = None  # aviones que ya aterrizaron
     aviones_desviados: List[Plane] = None    # aviones que se fueron a montevideo
     estadisticas: dict = None    # diccionario con estadisticas de la simulacion
@@ -54,10 +54,6 @@ class simulacion:
 
         self._programar_tormenta_del_dia()
 
-        # sistema de interpolacion para movimiento suave
-        self.aviones_anterior = []  # posiciones anteriores para interpolacion
-        self.frame_interpolacion = 0  # frame actual de interpolacion
-        self.frames_por_paso = 8  # cuantos frames visuales por paso de simulacion
 
 
 
