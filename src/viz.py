@@ -13,7 +13,7 @@ class visualizador_videojuego:
     
     def __init__(self, lambda_param: float, dias_simulacion: int = 3, viento: bool = False, p_go: float = 0.10,
                  tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30):
-        self.sim = simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion, viento_activo=viento,
+        self.sim = Simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion, viento_activo=viento,
                               p_goaround=p_go,
                               storm_activa=tormenta,
                               storm_prob=p_tormenta,

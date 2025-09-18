@@ -304,7 +304,7 @@ def ejecutar_multiples_simulaciones(lambda_param: float,
     
     for i in range(num_simulaciones):
         print(f"simulacion {i+1}/{num_simulaciones}")
-        sim = simulacion(
+        sim = Simulacion(
             lambda_param=lambda_param,
             dias_simulacion=dias_simulacion,
             viento_activo=viento_activo,
