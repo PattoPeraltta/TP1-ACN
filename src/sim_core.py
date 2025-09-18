@@ -202,7 +202,7 @@ class Simulacion:
                     aviones_a_remover.append(avion)
                     self.aviones_aterrizados.append(avion)
                     self.estadisticas['aterrizados'] += 1
-                    avion.status = "Aterrizage conf"
+                    avion.status = "Aterrizaje conf"
                     
             # verificar si se desvio a montevideo (sale de las 100mn)
             elif avion.x > 100.0 and avion.status == "desviado":
