@@ -3,7 +3,7 @@ from typing import Literal, Optional, Tuple
 import utilidades as u
 import const as c
 
-Status = Literal["en_fila", "desacelerando", "reinsercion", "desviado", "aterrizado"]
+Status = Literal["en_fila", "desacelerando", "reinsercion", "desviado", "Aterrizage conf", "Intento Aterrizar"]
 
 @dataclass
 class Plane:
@@ -99,11 +99,11 @@ class Plane:
     # hace avanzar al avion, calcula nuevo rango y se fija si hay que desacelerar 
     def avanzar(self,other,third):
         # si ya aterizo no hago nada
-        if self.status == "aterrizado":
+        if self.status == "Aterrizage conf":
             return
         # si con este step llega al aeropuerto termina
-        if self.x < self.v/60 * c.DT and self.status != "desviado":
-            self.status = "aterrizado"
+        if self.x <= self.v/60 * c.DT and self.status != "desviado":
+            self.status = "Intento Aterrizar"
             self.tiempo_estimado = 0
             return
         
@@ -122,7 +122,7 @@ class Plane:
         
         # me fijo si entra en un nuevo rango
         if rango_antes != self.rango_actual():
-            self.set_speed()
+            self.set__max_speed()
             
         if (other is not None and 
             other.status != "desviado" and 
@@ -137,7 +137,7 @@ class Plane:
             other.x >= self.x or 
             other.status == "desviado" or 
             self.distancia_mayor_5(other))):
-            self.set_max_speed()
+            self.set_speed()
 
         self.time_to_arrive()
             
@@ -196,7 +196,3 @@ class Plane:
         self.status = "desviado"
         self.v = 200
         self.tiempo_estimado = -1 # Pongo en -1 porque no se pouede calcular cuanto va a tardar
-
-    # Calculo la distancia que se movio el avion
-    def step(self,other,third):
-        self.avanzar(other,third)
