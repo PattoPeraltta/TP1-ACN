@@ -24,6 +24,9 @@ class visualizador_videojuego:
         # sistema de interpolacion para movimiento suave
         self.aviones_anterior = []  # posiciones anteriores para interpolacion
         
+        # sistema de animacion vertical para desviacion y reinsercion
+        self.aviones_vertical_animation = {}  # dict para trackear animacion vertical por avion
+        
         # colores para diferentes estados
         self.colores_estado = {
             'en_fila': '#00ff00',      # verde
@@ -107,37 +110,70 @@ class visualizador_videojuego:
                     break
             
             if avion_anterior:
-                # detectar si hubo un salto de posicion (reinsercion)
-                distancia_salto = abs(avion_actual.x - avion_anterior.x)
-                es_reinsercion = (distancia_salto > 5.0 or  # salto grande de posicion
-                                avion_anterior.status == "desviado" and avion_actual.status == "reinsercion")
-                
-                if es_reinsercion:
-                    # para reinsercion, usar directamente la posicion actual sin interpolacion
-                    avion_interp = Plane(
-                        id=avion_actual.id,
-                        t_spawn=avion_actual.t_spawn,
-                        x=avion_actual.x,
-                        v=avion_actual.v,
-                        status=avion_actual.status,
-                        tiempo_estimado=avion_actual.tiempo_estimado
-                    )
-                else:
-                    # interpolacion normal para movimiento continuo
-                    avion_interp = Plane(
-                        id=avion_actual.id,
-                        t_spawn=avion_actual.t_spawn,
-                        x=avion_anterior.x + (avion_actual.x - avion_anterior.x) * factor,
-                        v=avion_actual.v,  # velocidad actual
-                        status=avion_actual.status,
-                        tiempo_estimado=avion_actual.tiempo_estimado
-                    )
+                # interpolacion normal para todos los casos (incluyendo reinsercion)
+                # esto permite ver el movimiento suave hacia atras durante la reinsercion
+                avion_interp = Plane(
+                    id=avion_actual.id,
+                    t_spawn=avion_actual.t_spawn,
+                    x=avion_anterior.x + (avion_actual.x - avion_anterior.x) * factor,
+                    v=avion_actual.v,  # velocidad actual
+                    status=avion_actual.status,
+                    tiempo_estimado=avion_actual.tiempo_estimado
+                )
                 aviones_interpolados.append(avion_interp)
             else:
                 # si no hay posicion anterior, usar posicion actual
                 aviones_interpolados.append(avion_actual)
         
         return aviones_interpolados
+    
+    def calcular_posicion_y(self, avion):
+        """calcula la posicion y con animacion vertical suave"""
+        avion_id = avion.id
+        
+        # posiciones objetivo segun el estado
+        if avion.status == "desviado":
+            y_objetivo = 0.8  # fila superior para aviones desviados
+        else:
+            y_objetivo = 0.0  # fila principal para todos los demas aviones
+        
+        # inicializar animacion si no existe
+        if avion_id not in self.aviones_vertical_animation:
+            self.aviones_vertical_animation[avion_id] = {
+                'y_actual': y_objetivo,
+                'y_objetivo': y_objetivo,
+                'velocidad_animacion_base': 0.2  # velocidad base de transicion vertical
+            }
+        
+        animacion = self.aviones_vertical_animation[avion_id]
+        
+        # actualizar objetivo si cambio el estado
+        if animacion['y_objetivo'] != y_objetivo:
+            animacion['y_objetivo'] = y_objetivo
+        
+        # escalar velocidad de animacion con el multiplicador de velocidad de simulacion
+        velocidad_animacion_escalada = animacion['velocidad_animacion_base'] * self.velocidad_multiplier
+        
+        # interpolar hacia el objetivo
+        diferencia = animacion['y_objetivo'] - animacion['y_actual']
+        if abs(diferencia) > 0.01:  # solo animar si hay diferencia significativa
+            animacion['y_actual'] += diferencia * velocidad_animacion_escalada
+        else:
+            animacion['y_actual'] = animacion['y_objetivo']
+        
+        return animacion['y_actual']
+    
+    def limpiar_animaciones_aviones_removidos(self):
+        """limpia las animaciones de aviones que ya no estan en la simulacion"""
+        aviones_actuales_ids = {avion.id for avion in self.sim.aviones}
+        aviones_a_remover = []
+        
+        for avion_id in self.aviones_vertical_animation:
+            if avion_id not in aviones_actuales_ids:
+                aviones_a_remover.append(avion_id)
+        
+        for avion_id in aviones_a_remover:
+            del self.aviones_vertical_animation[avion_id]
         
     def limpiar_aviones_y_etiquetas(self):
         """limpia todos los aviones y etiquetas del grafico"""
@@ -156,6 +192,9 @@ class visualizador_videojuego:
         # limpiar aviones y etiquetas anteriores
         self.limpiar_aviones_y_etiquetas()
         
+        # limpiar animaciones de aviones removidos
+        self.limpiar_animaciones_aviones_removidos()
+        
         # obtener aviones interpolados para movimiento suave
         aviones_a_dibujar = self.obtener_aviones_interpolados()
         
@@ -166,11 +205,8 @@ class visualizador_videojuego:
         for i, avion in enumerate(aviones_a_dibujar):
             color = self.colores_estado.get(avion.status, '#000000')
             
-            # posicion y: todos en la misma fila excepto los desviados que van arriba
-            if avion.status == "desviado":
-                y_pos = 0.8  # fila superior para aviones desviados
-            else:
-                y_pos = 0.0  # fila principal para todos los demas aviones
+            # calcular posicion y con animacion vertical
+            y_pos = self.calcular_posicion_y(avion)
             
             # dibujar avion como circulo
             avion_artista = self.ax.scatter(avion.x, y_pos, 
