@@ -161,6 +161,19 @@ class Simulacion:
 
     def procesar_paso_temporal(self):
         """procesa un paso temporal de la simulacion"""
+
+        # veo si hay tormenta y hago que todos los aviones vuelvan
+        m_actual = self.tiempo_actual % 1440
+        motivo_ahora = self._motivo_cierre_actual(m_actual)
+        motivo_antes = self._motivo_cierre_actual((m_actual - c.DT) % 1440)
+        if motivo_ahora == "tormenta" and motivo_antes != "tormenta":
+            minutos_bloqueo = self._minutos_hasta_apertura()
+            for avion in self.aviones:
+                if avion.status in ("en_fila", "desacelerando", "reinsercion"):
+                    avion.set_desviado()
+                    avion.minutos_bloqueo = minutos_bloqueo  # bloquear reinserción hasta que abra
+                    self.estadisticas["desvios_tormenta"] += 1
+
         # generar nuevo avion si corresponde
         self.generar_nuevo_avion()
         
