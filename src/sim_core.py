@@ -7,12 +7,12 @@ import const as c
 from plane import Plane
 
 @dataclass
-class simulacion:
+class Simulacion:
     """clase principal para manejar la simulacion de monte carlo por dias"""
     lambda_param: float  # probabilidad de arribo por minuto
     dias_simulacion: int    # cantidad de dias a simular
     aviones: List[Plane] = None  # lista de aviones en el sistema
-    tiempo_actual: int = 350       # tiempo actual de la simulacion en minutos
+    tiempo_actual: int = 1380       # tiempo actual de la simulacion en minutos
     aviones_aterrizados: List[Plane] = None  # aviones que ya aterrizaron
     aviones_desviados: List[Plane] = None    # aviones que se fueron a montevideo
     estadisticas: dict = None    # diccionario con estadisticas de la simulacion
@@ -37,10 +37,6 @@ class simulacion:
                 'dias_completados': 0
             }
 
-        # sistema de interpolacion para movimiento suave
-        self.aviones_anterior = []  # posiciones anteriores para interpolacion
-        self.frame_interpolacion = 0  # frame actual de interpolacion
-        self.frames_por_paso = 8  # cuantos frames visuales por paso de simulacion
 
     def esta_aeropuerto_abierto(self) -> bool:
         """verifica si el aeropuerto esta abierto en el tiempo actual"""
@@ -195,7 +191,7 @@ def ejecutar_multiples_simulaciones(lambda_param: float, dias_simulacion: int, n
     
     for i in range(num_simulaciones):
         print(f"simulacion {i+1}/{num_simulaciones}")
-        sim = simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion)
+        sim = Simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion)
         sim.ejecutar_simulacion_completa()
         
         stats = sim.obtener_estadisticas()
