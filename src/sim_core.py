@@ -357,7 +357,8 @@ def estimar_probabilidad_5_aviones_en_1_hora(lambda_param: float, num_simulacion
     probabilidad_simulada = float(np.mean(conteos_por_hora == 5))
 
     # prob teórica Poisson
-    probabilidad_teorica = (lambda_60**5 * np.exp(-lambda_60)) / np.math.factorial(5)
+    import math
+    probabilidad_teorica = (lambda_60**5 * np.exp(-lambda_60)) / math.factorial(5)
 
     # error relativo (cuida división por cero por si lambda_60=0)
     if probabilidad_teorica > 0:

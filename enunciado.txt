@@ -1,0 +1,128 @@
+Trabajo Pr´actico 1. Aplicaciones Computacionales
+en Negocios
+Agosto 2025
+El trabajo debe ser realizado por un grupo de hasta 4 personas. Pueden mezclarse
+alumnos de distintas secciones. Trabajos individuales no son aceptables salvo ex-
+presa autorizaci´on del profesor y por un motivo ineludible.
+Reglas del trabajo pr´actico
+Los entregables son:
+Una presentaci´on de 15 slides con:
+presentaci´on del problema y discusi´on de elecciones de modelado
+esquemas del c´odigo implementado
+los par´ametros de la simulaci´on e implementaci´on
+resultados a las preguntas formuladas a trav´es de gr´aficos y estad´ısticas
+cualquier otra idea / concepto / que se quiera investigar en este proyecto a
+trav´es del modelo propuesto
+Una presentaci´on oral en grupo de 15 minutos. El c´odigo de las simulaciones, en
+Python, a entregar a los ayudantes del curso.
+Nicol´as indicar´a la fecha de presentaci´on para cada grupo en la semana del 22 de
+septiembre. Dos integrantes del grupo, elegidos por Nicol´as, presentar´an el trabajo.
+Los otros dos deber´an estar disponibles para correr y explicar el c´odigo cuando los
+1
+ayudantes lo soliciten.
+El problema
+Queremos modelar y simular el comportamiento de aviones que arriban al Aeropuerto
+Jorge Newbwery (AEP) de la ciudad de Buenos Aires, teniendo en cuenta su proceso
+de aproximaci´on y aterrizaje bajo condiciones estoc´asticas de congesti´on y clima.
+Supondemos que el horario de operaci´on es de 6am a medianoche. El trabajo busca
+analizar el desempe˜no del sistema ante diferentes niveles de demanda y condiciones
+clim´aticas, y proponer pol´ıticas que mejoren la operaci´on del sistema.
+Preguntas exploratorias
+(Google´a, lee papers, busc´a data si fuera necesarios. Esto es parte importante de un
+proyecto aplicado)
+Cu´antos aviones aterrizan en AEP entre las 6am y la medianoche?
+Supongamos que el avi´on t´ıpico es un Boeing 737. A medida que un avi´on se aproxima
+a AEP reduce su distancia a la pista y reduce su velocidad (no vamos a distinguir en-
+tre velocidad respecto al aire que rodea al avi´on y respecto a la tierra, las suponemos
+iguales). En aviaci´on la unidad de distancia es la milla n´autica (mn) y la unidad de
+velocidad es el nudo (k). Supongamos que la aproximaci´on a AEP comienza cuando
+el avi´on est´a a 100 millas n´auticas de distancia.
+Los par´ametros de aproximaci´on son los siguientes
+Distancia a AEP m´as de 100mn 100mn a 50mn 50mn a 15mn 15mn a 5mn 5mn a aterrizaje Rango de velocidad permitido
+500 - 300 nudos
+300 - 250 nudos
+250 - 200 nudos
+200 - 150 nudos
+150 - 120 nudos
+Cu´anto es una milla n´autica en kil´ometros? Y un nudo en kil´ometros por hora?
+Sanity check. A partir de la data arriba, cu´anto tardar´ıa un avi´on en llegar desde
+las 100 mn hasta AEP? Y si la velocidad a m´as de 100 mn fuera 500 nudos, cu´anto
+tardar´ıa en llegar desde Rosario a AEP? Estos ´ordenes de magnitud tienen sentido
+con lo que pod´es consultar en Aerol´ıneas Argentinas?
+2
+Supongamos que no puede haber aterrizajes separados por menos de cuatro minutos
+entre s´ı. Esta distancia temporal existe por seguridad y para permitir despegues
+entre aterrizajes.
+Cu´al es la cantidad m´axima de aterrizajes que podr´ıan suceder en teor´ıa en AEP por
+entre las 6am y la medianoche?
+Simulaci´on del proceso de operaci´on entre 6am y medianoche
+Supongamos que los aviones aparecen en el radar de AEP desde la direcci´on que im-
+plica una linea recta a la cabecera de pista (esto es, no tenemos aviones viniendo desde
+distintos puntos cardinales). Medimos el tiempo en minutos. Un avi´on aparecen vis-
+ibles en el radar de AEP a 100 mn de distancia en cada minuto con probabilidad
+λ < 1 y de manera independiente entre distintos minutos. Cuando el camino est´a
+despejado los aviones realizan su aproximaci´on de acuerdo a la velocidad m´axima
+posible en el rango de velocidad que corresponde a su distancia a AEP.
+Si dos aviones aparecen en el horizonte de 100mn con menos distancia temporal que
+4 minutos, o se encuentran en la cola con distancia temporal de menos de 4 minutos,
+el 2do avion (que ve la velocidad del avi´on de adelante y puede ajustar la propia
+instant´aneamente) baja su velocidad en 20 nudos vs la del avi´on de adelante durante
+el tiempo que sea necesario hasta lograr una distancia temporal de 5 minutos (uno
+m´as que el m´ınimo de 4 para tener un buffer). Logrado esto, revierte a la velocidad
+m´axima posible para su distancia a AEP. Si el nivel de congesti´on que un avi´on
+encuentra es tal que debe bajar su velocidad por abajo del valor m´ınimo permitido
+en el rango correspondiente, se sale de la fila, vira 180 grados y comienza a volar
+hacia atr´as a 200 nudos hasta encontrar un gap de 10 minutos o m´as en la fila para
+volver a meterse en el medio, o salirse de las 100mn si no encuentra gap. En este
+´ultimo caso decimos que el avi´on se fue a Montevideo.
+1) Implement´a una simulaci´on de Monte Carlo para la fila de aviones que te permite
+describir la posici´on de cada avi´on en el tiempo y en el espacio. Implement´a un
+mecanismo de visualizaci´on.
+2) Si el promedio de arribos es de 1 avi´on por hora, cu´anto es λ?
+3) Bajo este valor de λ y en base a una simulaci´on suficientemente larga estim´a la
+probabilidad de que lleguen 5 aviones en una hora. Pod´es verificar tu resultado de
+manera anal´ıtica?
+3
+4) Simul´a el sistema de arribos con λ ∈ {0.02,0.1,0.2,0.5y1}? Decimos que hay
+congesti´on si un avi´on debe volar m´as lento que su velocidad m´axima posible. El
+aumento de λ incrementa la frecuencia de congestiones? Se ven gr´aficamente? Cu´al
+es el atraso promedio de aviones vs lo que suceder´ıa sin congesti´on? Cu´an frecuente
+es un desv´ıo a Montevideo? Respond´e en base a un n´umero de simulaciones suficien-
+temente grande y acompa˜nando cada respuesta num´erica con su error de estimaci´on.
+Cada tanto sucede un episodio como este
+https://www.youtube.com/watch?v=Z7JKt0jwuXc
+o sea una interrupci´on, en cuyo caso el avi´on desv´ıa al r´ıo, cambia el rumbo de manera
+instant´anea en 180 grados y comienza a volar en paralelo y en direcci´on opuesta a
+la cola de aviones en el aire a 200 nudos hasta encontrar el primer hueco en la cola
+con un gap de al menos 10 minutos y que est´e a mas de 5 mn de AEP.
+5) Si en un d´ıa ventoso cada avi´on tiene 1/10 de chances de tener que interrumpir su
+aterrizaje, c´omo cambian las estad´ısticas de atraso en funci´on de λ? Responder con
+una simulaci´on que incluya una visualizaci´on de aviones incluyendo los que se desv´ıan
+y deben buscar su hueco, y los c´alculos de estad´ısticas de performance que tengan
+sentido (atraso promedio, desv´ıos a Montevideo, etc). Acompa˜n´a cada respuesta
+num´erica con su error de estimaci´on.
+6) Si en un d´ıa pasa una tormenta que obliga a cerrar AEP de manera sorpresiva (o
+sea sin que sea anticipada por los pilotos) por media hora, c´omo son las consecuencias
+en t´erminos de desv´ıos a Montevideo, atrasos y otras m´etricas de calidad en funci´on
+de λ?
+7) Dado un cierto nivel de λ y las velocidades m´ınimas y m´aximas de aviones ya
+dadas en el enunciado, se te ocurre alguna pol´ıtica de vuelos que mejore la perfor-
+mance de AEP en t´erminos de reducir atrasos y/o eliminar desv´ıos a Montevideo?
+Hay un tradeoff entre atraso promedio y desv´ıos a Montevideo?
+(Consider´a pol´ıticas a ejecutarse en cada instante t basadas en las posiciones y ve-
+locidades de ese momento. Esto es, suponemos que los pilotos o controlador de vuelo
+no pueden correr simulaciones. Sus reglas de decisi´on deben ser sencillas y basadas
+en info contempor´anea)
+Obten´e todas tus respuestas a partir de un n´umero de simulaciones suficientemente
+grande como para que el error de estimaci´on que reportes con tus respuestas sea
+peque˜no en t´erminos del problema. Asegurate de que tus resultados tengan sentido
+f´ısico, orden de magnitud razonable, etc. Tu presentaci´on debe tener el formato de
+una consultor´ıa. Pens´a los mejores gr´aficos y estad´ısticas para comunicar tus resul-
+4
+tados de manera efectiva.
+A explorar libremente por bonus points
+Pensar modelo, simulaci´on y visualizaci´on si los aviones aparecen de manera es-
+toc´astica a 100 mn de AEP pero desde cualquier direcci´on.
+Pensar modelo, simulaci´on y visualizaci´on en cualquier otra dimensi´on del problema
+que te parezca ´util y significativa para una mejor operaci´on de AEP.
+5

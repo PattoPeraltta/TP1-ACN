@@ -18,6 +18,9 @@ def random_uniform(x,y):
     return numero_random
 
 def tiempo_min_para_mn(nudos,mn):
+    # evitar division por cero
+    if nudos == 0:
+        return float('inf')
     return 60 * mn /nudos
 
 def ask_bool(prompt: str) -> bool:
