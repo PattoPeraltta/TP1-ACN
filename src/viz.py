@@ -54,6 +54,7 @@ class visualizador_videojuego:
         self.fig.subplots_adjust(bottom=0.15)
         self.ax.set_xlim(-10, 110)  # espacio extra para aviones desviados
         self.ax.set_ylim(-2, 2)
+        self.ax.set_yticklabels([])
         self.ax.set_xlabel('distancia al aeropuerto (millas nauticas)', fontsize=12)
         self.ax.set_ylabel('', fontsize=12)
         self.ax.set_title('simulacion de aproximacion de aviones - aep', fontsize=14, fontweight='bold')
@@ -73,11 +74,11 @@ class visualizador_videojuego:
             
             # etiquetas de rangos
             if dmax != 100:
-                self.ax.text((dmin + dmax) / 2, 1.5, f'{dmin}-{dmax}mn', 
+                self.ax.text((dmin + dmax) / 2, -1.5, f'{dmin}-{dmax}mn', 
                            ha='center', va='center', fontsize=10, 
                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
             else:
-                self.ax.text((dmin + dmax) / 2, 1.5, f'{dmin}+mn', 
+                self.ax.text((dmin + dmax) / 2, -1.5, f'{dmin}+mn', 
                            ha='center', va='center', fontsize=10,
                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
         
