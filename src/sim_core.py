@@ -25,9 +25,6 @@ class Simulacion:
     storm_prob: float = 0.0                        # prob diaria de que haya tormenta
     storm_duracion_min: int = 30                   # duración de cada tormenta
     storm_inicio_min: Optional[int] = None         # inicio programado para el día actual (si hay)
-
-
-    
     
     def __post_init__(self):
         """inicializa las listas vacias al crear la simulacion"""
@@ -53,9 +50,6 @@ class Simulacion:
             }
 
         self._programar_tormenta_del_dia()
-
-
-
 
     def _motivo_cierre_actual(self, m: int) -> str | None:
         """Devuelve 'horario' si está fuera de [06:00,24:00), 'tormenta' si cae en la ventana activa, o None si abierto."""
@@ -91,8 +85,6 @@ class Simulacion:
         m = self.tiempo_actual % 1440
         return self._motivo_cierre_actual(m) is None
     
-    
-
     def obtener_hora_actual(self) -> str:
         """retorna la hora actual en formato hh:mm"""
         minutos_en_dia = self.tiempo_actual % 1440
