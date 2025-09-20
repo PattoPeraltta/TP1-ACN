@@ -6,5 +6,7 @@ python3 src/viz.py <<EOF
 3
 True
 0.1
-False
+True
+0.9
+30
 EOF

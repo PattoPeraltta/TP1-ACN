@@ -93,6 +93,10 @@ class visualizador_videojuego:
                                        verticalalignment='top', horizontalalignment='right', fontsize=10,
                                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8))
         
+        # elementos para indicador de tormenta
+        self.storm_indicator_lines = []  # lista para almacenar las lineas diagonales
+        self.storm_text = None  # texto "TORMENTA"
+        
     def obtener_aviones_interpolados(self) -> List[Plane]:
         """retorna posiciones interpoladas de los aviones para movimiento suave"""
         if not self.aviones_anterior or not self.sim.aviones:
@@ -128,6 +132,56 @@ class visualizador_videojuego:
                 aviones_interpolados.append(avion_actual)
         
         return aviones_interpolados
+    
+    def dibujar_indicador_tormenta(self) -> None:
+        """dibuja el indicador visual de tormenta en el eje Y"""
+        # limpiar indicadores anteriores
+        self.limpiar_indicador_tormenta()
+        
+        # verificar si hay tormenta activa usando la funcion existente
+        m_actual = self.sim.tiempo_actual % 1440
+        motivo_cierre = self.sim._motivo_cierre_actual(m_actual)
+        
+        if motivo_cierre == "tormenta":
+            # dibujar linea vertical central
+            self.ax.axvline(x=0, color='black', linewidth=4, alpha=0.8)
+            
+            # dibujar lineas diagonales rojas
+            num_lineas = 11
+            for i in range(num_lineas):
+                # calcular posicion y de la linea diagonal
+                y_pos = -1.5 + (i * 3.0 / (num_lineas - 1))
+                
+                # dibujar linea diagonal (pendiente positiva)
+                x_start = -3
+                x_end = 3
+                y_start = y_pos - 0.3
+                y_end = y_pos + 0.3
+                
+                linea = self.ax.plot([x_start, x_end], [y_start, y_end], 
+                                   color='red', linewidth=6, alpha=0.8)[0]
+                self.storm_indicator_lines.append(linea)
+            
+            # agregar texto "TORMENTA" en el eje Y, rotado 90 grados
+            self.storm_text = self.ax.text(0, 0, 'TORMENTA', 
+                                         ha='center', va='center', fontsize=16, 
+                                         fontweight='bold', color='red',
+                                         rotation=90,
+                                         bbox=dict(boxstyle='round,pad=0.5', 
+                                                 facecolor='white', alpha=0.9,
+                                                 edgecolor='red', linewidth=2))
+    
+    def limpiar_indicador_tormenta(self) -> None:
+        """limpia el indicador de tormenta del grafico"""
+        # remover lineas diagonales
+        for linea in self.storm_indicator_lines:
+            linea.remove()
+        self.storm_indicator_lines.clear()
+        
+        # remover texto
+        if self.storm_text is not None:
+            self.storm_text.remove()
+            self.storm_text = None
     
     def calcular_posicion_y(self, avion) -> float:
         """calcula la posicion y con animacion vertical suave"""
@@ -311,6 +365,7 @@ class visualizador_videojuego:
         
         # actualizar visualizacion con interpolacion (siempre, para movimiento suave)
         self.dibujar_aviones()
+        self.dibujar_indicador_tormenta()
         self.actualizar_informacion()
     
     def mostrar_estadisticas_finales(self) -> None:
@@ -372,7 +427,7 @@ class visualizador_videojuego:
 
         # boton de reset
         ax_reset = plt.axes([0.60, 0.02, 0.08, 0.03])
-        self.reset_button = Button(ax_reset, 'Reset')
+        self.reset_button = Button(ax_reset, 'Reset Sim')
         self.reset_button.on_clicked(self.reset_velocidad)
 
     def cambiar_velocidad(self, val) -> None:
@@ -385,7 +440,17 @@ class visualizador_videojuego:
         self.pause_button.label.set_text('Reanudar' if self.paused else 'Pausa')
 
     def reset_velocidad(self, event) -> None:
-        """resetea la velocidad a 1.0 y reanuda"""
+        """resetea toda la simulacion a su estado inicial"""
+        # resetear la simulacion
+        self.sim.reiniciar_simulacion()
+        
+        # resetear estado de visualizacion
+        self.aviones_anterior = []
+        self.aviones_vertical_animation = {}
+        self.tiempo_acumulado = 0.0
+        self.ultimo_tiempo_simulacion = time.time()
+        
+        # resetear controles
         self.velocidad_multiplier = 1.0
         self.paused = False
         self.slider_velocidad.reset()

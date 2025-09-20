@@ -3,7 +3,7 @@ from typing import Literal, Optional, Tuple
 import utilidades as u
 import const as c
 
-Status = Literal["en_fila", "desacelerando", "reinsercion", "desviado", "Aterrizaje conf", "Intento Aterrizar"]
+Status = Literal["en_fila", "desacelerando", "reinsercion", "desviado", "aterrizaje_confirmado", "intento_aterrizar"]
 @dataclass
 class Plane:
     id: int                   # Id identificador
@@ -98,11 +98,11 @@ class Plane:
     # hace avanzar al avion, calcula nuevo rango y se fija si hay que desacelerar 
     def avanzar(self,other,third) -> None:
         # si ya aterizo no hago nada
-        if self.status == "Aterrizaje conf":
+        if self.status == "aterrizaje_confirmado":
             return
         # si con este step llega al aeropuerto termina
         if self.x <= self.v/60 * c.DT and self.status != "desviado":
-            self.status = "Intento Aterrizar"
+            self.status = "intento_aterrizar"
             self.tiempo_estimado = 0
             return
         

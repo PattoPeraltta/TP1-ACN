@@ -185,9 +185,8 @@ class Simulacion:
             # hacer avanzar el avion
             avion.avanzar(avion_adelante, avion_atras)
 
-
             # verificar si aterrizo
-            if avion.status == "Intento Aterrizar":
+            if avion.status == "intento_aterrizar":
                 m = self.tiempo_actual % 1440
                 motivo_cierre = self._motivo_cierre_actual(m)
                 if motivo_cierre is not None:
@@ -207,7 +206,7 @@ class Simulacion:
                     aviones_a_remover.append(avion)
                     self.aviones_aterrizados.append(avion)
                     self.estadisticas['aterrizados'] += 1
-                    avion.status = "Aterrizaje conf"
+                    avion.status = "aterrizaje_confirmado"
                     
             # verificar si se desvio a montevideo (sale de las 100mn)
             elif avion.x > 100.0 and avion.status == "desviado":
@@ -281,7 +280,11 @@ class Simulacion:
             'tiempo_promedio_aterrizaje': 0,
             'congestiones': 0,
             'desvios_a_montevideo': 0,
-            'dias_completados': 0
+            'dias_completados': 0,
+            'desvios_viento': 0,
+            'desvios_cierre': 0,
+            'desvios_tormenta': 0,
+            'reincerciones_exitosas': 0     
         }
 
 def ejecutar_multiples_simulaciones(lambda_param: float,

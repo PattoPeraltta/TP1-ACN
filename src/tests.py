@@ -147,7 +147,7 @@ class TestPlane(unittest.TestCase):
         
         avion.avanzar(None, None)
         
-        self.assertEqual(avion.status, "Intento Aterrizar")
+        self.assertEqual(avion.status, "intento_aterrizar")
         self.assertEqual(avion.tiempo_estimado, 0)
         
     def test_avanzar_desviado_retrocede(self):
@@ -431,7 +431,7 @@ class TestViento(unittest.TestCase):
                         viento_activo=True, p_goaround=1.0)  # probabilidad 100%
         
         # crear avion que intenta aterrizar
-        avion = Plane(id=1, t_spawn=0, x=0.1, v=300, status="Intento Aterrizar")
+        avion = Plane(id=1, t_spawn=0, x=0.1, v=300, status="intento_aterrizar")
         sim.aviones = [avion]
         sim.tiempo_actual = 720  # aeropuerto abierto
         
@@ -448,7 +448,7 @@ class TestViento(unittest.TestCase):
                         viento_activo=False)
         
         # crear avion que intenta aterrizar
-        avion = Plane(id=1, t_spawn=0, x=0.1, v=300, status="Intento Aterrizar")
+        avion = Plane(id=1, t_spawn=0, x=0.1, v=300, status="intento_aterrizar")
         sim.aviones = [avion]
         sim.tiempo_actual = 720  # aeropuerto abierto
         
@@ -456,7 +456,7 @@ class TestViento(unittest.TestCase):
         sim.procesar_paso_temporal()
         
         # debe aterrizar exitosamente
-        self.assertEqual(avion.status, "Aterrizaje conf")
+        self.assertEqual(avion.status, "aterrizaje_confirmado")
         self.assertEqual(sim.estadisticas['aterrizados'], 1)
         self.assertEqual(len(sim.aviones_aterrizados), 1)
 
@@ -497,14 +497,14 @@ class TestCasosBorde(unittest.TestCase):
         
     def test_avion_aterrizado_no_avanza(self):
         """test: avion que ya aterrizo no se mueve"""
-        avion = Plane(id=1, t_spawn=0, x=0.0, v=300, status="Aterrizaje conf")
+        avion = Plane(id=1, t_spawn=0, x=0.0, v=300, status="aterrizaje_confirmado")
         posicion_inicial = avion.x
         
         avion.avanzar(None, None)
         
         # no debe moverse
         self.assertEqual(avion.x, posicion_inicial)
-        self.assertEqual(avion.status, "Aterrizaje conf")
+        self.assertEqual(avion.status, "aterrizaje_confirmado")
         
     def test_avion_con_velocidad_cero(self):
         """test: avion con velocidad cero no se mueve"""
@@ -739,15 +739,15 @@ class TestIntegracion(unittest.TestCase):
         
         # simular hasta que aterrice
         pasos = 0
-        while avion.status != "Aterrizaje conf" and avion.status != "desviado" and pasos < 1000:
+        while avion.status != "aterrizaje_confirmado" and avion.status != "desviado" and pasos < 1000:
             sim.procesar_paso_temporal()
             pasos += 1
             
         # debe haber terminado su ciclo
-        self.assertTrue(avion.status in ["Aterrizaje conf", "desviado"])
+        self.assertTrue(avion.status in ["aterrizaje_confirmado", "desviado"])
         
         # si aterrizo, debe estar en la lista de aterrizados
-        if avion.status == "Aterrizaje conf":
+        if avion.status == "aterrizaje_confirmado":
             self.assertIn(avion, sim.aviones_aterrizados)
             self.assertEqual(sim.estadisticas['aterrizados'], 1)
 
