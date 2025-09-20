@@ -7,12 +7,13 @@ from sim_core import Simulacion
 from plane import Plane
 from utilidades import ask_bool, ask_pos_int, ask_prob_01
 import const as c
+from typing import List, Dict, Any, Optional
 
 class visualizador_videojuego:
     """visualizador tipo videojuego para la simulacion de aviones"""
     
     def __init__(self, lambda_param: float, dias_simulacion: int = 3, viento: bool = False, p_go: float = 0.10,
-                 tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30):
+                 tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30) -> None:
         self.sim = Simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion, viento_activo=viento,
                               p_goaround=p_go,
                               storm_activa=tormenta,
@@ -49,7 +50,7 @@ class visualizador_videojuego:
 
         self.setup_controls()
         
-    def setup_plot(self):
+    def setup_plot(self) -> None:
         """configura el grafico principal"""
         self.fig.subplots_adjust(bottom=0.15)
         self.ax.set_xlim(-10, 110)  # espacio extra para aviones desviados
@@ -92,7 +93,7 @@ class visualizador_videojuego:
                                        verticalalignment='top', horizontalalignment='right', fontsize=10,
                                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8))
         
-    def obtener_aviones_interpolados(self):
+    def obtener_aviones_interpolados(self) -> List[Plane]:
         """retorna posiciones interpoladas de los aviones para movimiento suave"""
         if not self.aviones_anterior or not self.sim.aviones:
             return self.sim.aviones
@@ -128,7 +129,7 @@ class visualizador_videojuego:
         
         return aviones_interpolados
     
-    def calcular_posicion_y(self, avion):
+    def calcular_posicion_y(self, avion) -> float:
         """calcula la posicion y con animacion vertical suave"""
         avion_id = avion.id
         
@@ -164,7 +165,7 @@ class visualizador_videojuego:
         
         return animacion['y_actual']
     
-    def limpiar_animaciones_aviones_removidos(self):
+    def limpiar_animaciones_aviones_removidos(self) -> None:
         """limpia las animaciones de aviones que ya no estan en la simulacion"""
         aviones_actuales_ids = {avion.id for avion in self.sim.aviones}
         aviones_a_remover = []
@@ -176,7 +177,7 @@ class visualizador_videojuego:
         for avion_id in aviones_a_remover:
             del self.aviones_vertical_animation[avion_id]
         
-    def limpiar_aviones_y_etiquetas(self):
+    def limpiar_aviones_y_etiquetas(self) -> None:
         """limpia todos los aviones y etiquetas del grafico"""
         # limpiar aviones anteriores
         for artista in self.ax.collections[:]:
@@ -188,7 +189,7 @@ class visualizador_videojuego:
             if hasattr(artista, '_es_etiqueta_avion'):
                 artista.remove()
         
-    def dibujar_aviones(self):
+    def dibujar_aviones(self) -> None:
         """dibuja todos los aviones en el grafico"""
         # limpiar aviones y etiquetas anteriores
         self.limpiar_aviones_y_etiquetas()
@@ -233,7 +234,7 @@ class visualizador_videojuego:
                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8, edgecolor='black'))
             etiqueta._es_etiqueta_avion = True
     
-    def actualizar_informacion(self):
+    def actualizar_informacion(self) -> None:
         """actualiza la informacion de tiempo y estado"""
         hora_actual = self.sim.obtener_hora_actual()
         dia_actual = self.sim.obtener_dia_actual()
@@ -270,7 +271,7 @@ class visualizador_videojuego:
         self.texto_stats.set_text(stats_text)
     
     
-    def animar(self, frame):
+    def animar(self, frame) -> None:
         """funcion de animacion principal con interpolacion suave"""
         if self.paused:
             return
@@ -312,7 +313,7 @@ class visualizador_videojuego:
         self.dibujar_aviones()
         self.actualizar_informacion()
     
-    def mostrar_estadisticas_finales(self):
+    def mostrar_estadisticas_finales(self) -> None:
         """muestra las estadisticas finales cuando termina la simulacion"""
         self.sim.calcular_estadisticas_finales()
         stats = self.sim.obtener_estadisticas()
@@ -339,7 +340,7 @@ class visualizador_videojuego:
             print(f"tasa de desvio: {tasa_desvio:.1f}%")
         print("="*50)
     
-    def ejecutar_visualizacion(self):
+    def ejecutar_visualizacion(self) -> None:
         """ejecuta la visualizacion tipo videojuego"""
         print("iniciando visualizacion tipo videojuego...")
         
@@ -357,7 +358,7 @@ class visualizador_videojuego:
             print("\nvisualizacion detenida por el usuario")
             self.mostrar_estadisticas_finales()
 
-    def setup_controls(self):
+    def setup_controls(self) -> None:
         """agrega controles interactivos de velocidad, play/pausa y reset"""
         # slider horizontal de velocidad
         ax_speed = plt.axes([0.15, 0.02, 0.3, 0.03])
@@ -374,23 +375,23 @@ class visualizador_videojuego:
         self.reset_button = Button(ax_reset, 'Reset')
         self.reset_button.on_clicked(self.reset_velocidad)
 
-    def cambiar_velocidad(self, val):
+    def cambiar_velocidad(self, val) -> None:
         """se llama cuando se modifica el slider de velocidad"""
         self.velocidad_multiplier = val
     
-    def toggle_pause(self, event):
+    def toggle_pause(self, event) -> None:
         """toggle de play/pausa"""
         self.paused = not self.paused
         self.pause_button.label.set_text('Reanudar' if self.paused else 'Pausa')
 
-    def reset_velocidad(self, event):
+    def reset_velocidad(self, event) -> None:
         """resetea la velocidad a 1.0 y reanuda"""
         self.velocidad_multiplier = 1.0
         self.paused = False
         self.slider_velocidad.reset()
         self.pause_button.label.set_text('Pausa')
 
-def ejecutar_analisis_completo():
+def ejecutar_analisis_completo() -> Dict[str, Any]:
     """ejecuta el analisis completo segun la consigna"""
     print("=== analisis completo del sistema de aproximacion de aviones ===\n")
     
@@ -428,7 +429,7 @@ def ejecutar_analisis_completo():
     return resultados
 
 # funcion principal para ejecutar la visualizacion
-def main():
+def main() -> None:
     """funcion principal para ejecutar la simulacion con visualizacion"""
     print("simulador de aproximacion de aviones - aep")
     print("selecciona una opcion:")

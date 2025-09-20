@@ -15,35 +15,42 @@ class Plane:
     minutos_bloqueo:int = 0
 
     # velocidad maxima dada el rango en el que esta
-    def max_speed(self):
+    def max_speed(self) -> float:
         max_speed = u.velocidad_permitida(self.x)[1]
         return max_speed
+    
     # velocidad minima dada el rango en el que esta
-    def min_speed(self):
+    def min_speed(self) -> float:
         mix_speed = u.velocidad_permitida(self.x)[0]
         return mix_speed
-    def get_status(self):
-        return self.status  
-    def get_id(self):
+
+    def get_status(self) -> Status:
+        return self.status
+
+    def get_id(self) -> int:
         return self.id
+
     # setea velocidad aleatoria al avion respetando los limites del rango
-    def set_speed(self):
+    def set_speed(self) -> None:
         self.v = u.random_uniform(self.min_speed(),self.max_speed())
         return 
+    
     # setea la maxima velocidad permitida en el rango al avion
-    def set_max_speed(self):
+    def set_max_speed(self) -> None:
         self.v = self.max_speed()
         # si estaba desacelerando, volver a estado normal
         if self.status == "desacelerando":
             self.status = "en_fila"
         return
+
     # devuleve el rango actual del avion en forma tupla (DistMin, DistMax)
-    def rango_actual(self):
+    def rango_actual(self) -> Tuple[float, float]:
         for dmin, dmax, _ in c.rangos:
             if dmin <= self.x < dmax:
                 return (dmin, dmax)
         return (c.rangos[-1][0], c.rangos[-1][1]) # fallback para cuando esta en rango (0, 5)
-    def distancia_menor_4(self, other):
+
+    def distancia_menor_4(self, other) -> bool:
         if other is None:
             return False
         
@@ -60,7 +67,8 @@ class Plane:
         
         # Considerar "muy cerca" si está a menos de 4 minutos con su velocidad actual
         return tiempo_para_alcanzar < 4
-    def distancia_mayor_5(self, other):
+
+    def distancia_mayor_5(self, other) -> bool:
         if other is None:
             return True
         
@@ -71,8 +79,9 @@ class Plane:
         tiempo_para_alcanzar = distancia_actual / (self.v / 60)
         
         return tiempo_para_alcanzar > 5
+
     # actualizacion de la estimacion de llegada
-    def time_to_arrive(self):
+    def time_to_arrive(self) -> None:
         lista_rangos = c.LISTA_RANGOS
         rango_anterior = 0
         tiempo_estimado = 0.0
@@ -85,8 +94,9 @@ class Plane:
             tiempo_estimado += u.tiempo_min_para_mn(velocidad_de_ese_rango,rango_actual)
             rango_anterior = rango_actual
         self.tiempo_estimado = tiempo_estimado
+
     # hace avanzar al avion, calcula nuevo rango y se fija si hay que desacelerar 
-    def avanzar(self,other,third):
+    def avanzar(self,other,third) -> None:
         # si ya aterizo no hago nada
         if self.status == "Aterrizaje conf":
             return
@@ -129,8 +139,9 @@ class Plane:
             self.set_speed()
 
         self.time_to_arrive()       
+    
     # hace retroceder al avion desviado y evalua reinsercion
-    def retroceder(self, other, third):
+    def retroceder(self, other, third) -> None:
         # 1) alejarse (desviado)
         self.x += (self.v / 60.0) * c.DT
 
@@ -161,8 +172,9 @@ class Plane:
                     self.status = "reinsercion"
                     self.set_speed()
         # si no hay referencias, no reinsertar
+    
     # setea el avion como desacelerando
-    def set_desacelerando(self,other):
+    def set_desacelerando(self,other) -> None:
         if other is None:
             # si no hay avion de adelante, no se puede desacelerar
             return
@@ -177,8 +189,9 @@ class Plane:
             self.v = nueva_velocidad
             self.status = "desacelerando"
             self.time_to_arrive()
+    
     #  funcion para desviar al avion, no avanzo porque en la primera que gira no puede avanzar
-    def set_desviado(self):
+    def set_desviado(self) -> None:
         self.status = "desviado"
         self.v = 200
         self.tiempo_estimado = -1 # Pongo en -1 porque no se pouede calcular cuanto va a tardar

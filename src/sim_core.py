@@ -26,7 +26,7 @@ class Simulacion:
     storm_duracion_min: int = 30                   # duración de cada tormenta
     storm_inicio_min: Optional[int] = None         # inicio programado para el día actual (si hay)
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """inicializa las listas vacias al crear la simulacion"""
         if self.aviones is None:
             self.aviones = []
@@ -67,7 +67,7 @@ class Simulacion:
 
         return None  # abierto
 
-    def _programar_tormenta_del_dia(self):
+    def _programar_tormenta_del_dia(self) -> None:
         """Decide si hay tormenta hoy y, si sí, elige inicio uniforme en [0, 1440 - dur]."""
         if not self.storm_activa or self.storm_prob <= 0.0:
             self.storm_inicio_min = None
@@ -128,7 +128,7 @@ class Simulacion:
         self.storm_inicio_min = None
         self._programar_tormenta_del_dia()
 
-    def ordenar_aviones_por_distancia(self):
+    def ordenar_aviones_por_distancia(self) -> None:
         """ordena los aviones por distancia al aeropuerto (mas cerca primero)"""
         self.aviones.sort(key=lambda avion: avion.x, reverse=False)
 
@@ -151,7 +151,7 @@ class Simulacion:
 
         return 0 
 
-    def procesar_paso_temporal(self):
+    def procesar_paso_temporal(self) -> None:
         """procesa un paso temporal de la simulacion"""
 
         # veo si hay tormenta y hago que todos los aviones vuelvan
@@ -232,7 +232,7 @@ class Simulacion:
             self._al_cambiar_de_dia()
         # actualizar dia actual
 
-    def ejecutar_simulacion_completa(self):
+    def ejecutar_simulacion_completa(self) -> None:
         """ejecuta la simulacion completa desde el inicio hasta el final"""
         print(f"iniciando simulacion con lambda={self.lambda_param}")
         print(f"dias a simular: {self.dias_simulacion}")
@@ -251,7 +251,7 @@ class Simulacion:
         self.calcular_estadisticas_finales()
         print("simulacion completada!")
 
-    def calcular_estadisticas_finales(self):
+    def calcular_estadisticas_finales(self) -> None:
         """calcula las estadisticas finales de la simulacion"""
         if self.estadisticas['aterrizados'] > 0:
             tiempos_aterrizaje = []
@@ -267,7 +267,7 @@ class Simulacion:
         """retorna un diccionario con las estadisticas de la simulacion"""
         return self.estadisticas.copy()
 
-    def reiniciar_simulacion(self):
+    def reiniciar_simulacion(self) -> None:
         """reinicia la simulacion a su estado inicial"""
         self.aviones = []
         self.aviones_aterrizados = []

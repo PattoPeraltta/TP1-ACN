@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 import sys
 import os
+from typing import Any
 
 # agregar el directorio src al path para poder importar los modulos
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +22,7 @@ import utilidades as u
 class TestPlane(unittest.TestCase):
     """tests para la clase plane - comportamiento individual de aviones"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         # fijar seed para tests reproducibles
         np.random.seed(42)
@@ -220,7 +221,7 @@ class TestPlane(unittest.TestCase):
 class TestSimulacion(unittest.TestCase):
     """tests para la clase simulacion - comportamiento del sistema completo"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -356,7 +357,7 @@ class TestSimulacion(unittest.TestCase):
 class TestTormentas(unittest.TestCase):
     """tests para el sistema de tormentas y cierres del aeropuerto"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -420,7 +421,7 @@ class TestTormentas(unittest.TestCase):
 class TestViento(unittest.TestCase):
     """tests para el sistema de viento y go-arounds"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -462,7 +463,7 @@ class TestViento(unittest.TestCase):
 class TestCasosBorde(unittest.TestCase):
     """tests para casos borde y situaciones extremas"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -526,7 +527,7 @@ class TestCasosBorde(unittest.TestCase):
 class TestEstadisticas(unittest.TestCase):
     """tests para el calculo y actualizacion de estadisticas"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -633,7 +634,7 @@ class TestFuncionesAuxiliares(unittest.TestCase):
 class TestSimulacionesMultiples(unittest.TestCase):
     """tests para funciones de simulaciones multiples"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -680,7 +681,7 @@ class TestSimulacionesMultiples(unittest.TestCase):
 class TestIntegracion(unittest.TestCase):
     """tests de integracion que combinan multiples componentes"""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """configuracion inicial para cada test"""
         np.random.seed(42)
         
@@ -750,7 +751,7 @@ class TestIntegracion(unittest.TestCase):
             self.assertIn(avion, sim.aviones_aterrizados)
             self.assertEqual(sim.estadisticas['aterrizados'], 1)
 
-def ejecutar_todos_los_tests():
+def ejecutar_todos_los_tests() -> bool:
     """funcion para ejecutar todos los tests y mostrar resultados"""
     print("ejecutando tests comprehensivos de la simulacion de aviones...")
     print("=" * 60)
