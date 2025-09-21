@@ -183,7 +183,12 @@ class Simulacion:
             avion_atras = self.aviones[i+1] if i < len(self.aviones)-1 else None
             
             # hacer avanzar el avion
+            status_antes = avion.status
             avion.avanzar(avion_adelante, avion_atras)
+            
+            # verificar si hubo una reinsercion exitosa
+            if status_antes == "reinsercion" and avion.status == "en_fila":
+                self.estadisticas['reincerciones_exitosas'] += 1
 
             # verificar si aterrizo
             if avion.status == "intento_aterrizar":
@@ -207,6 +212,8 @@ class Simulacion:
                     self.aviones_aterrizados.append(avion)
                     self.estadisticas['aterrizados'] += 1
                     avion.status = "aterrizaje_confirmado"
+                    avion.t_landing = self.tiempo_actual  # registrar el tiempo de aterrizaje
+                    
                     
             # verificar si se desvio a montevideo (sale de las 100mn)
             elif avion.x > 100.0 and avion.status == "desviado":
@@ -248,23 +255,56 @@ class Simulacion:
         
         # calcular estadisticas finales
         self.calcular_estadisticas_finales()
-        print("simulacion completada!")
 
     def calcular_estadisticas_finales(self) -> None:
         """calcula las estadisticas finales de la simulacion"""
+        # calcular tiempo promedio de aterrizaje
         if self.estadisticas['aterrizados'] > 0:
             tiempos_aterrizaje = []
             for avion in self.aviones_aterrizados:
-                tiempo_vuelo = avion.tiempo_estimado if avion.tiempo_estimado is not None else 0
-                tiempos_aterrizaje.append(tiempo_vuelo)
+                # usar el tiempo real de vuelo (t_landing - t_spawn) en lugar de tiempo_estimado
+                tiempo_vuelo = avion.tiempo_total_vuelo()
+                if tiempo_vuelo is not None:
+                    tiempos_aterrizaje.append(tiempo_vuelo)
             
-            self.estadisticas['tiempo_promedio_aterrizaje'] = np.mean(tiempos_aterrizaje)
+            if tiempos_aterrizaje:  # verificar que hay tiempos válidos
+                self.estadisticas['tiempo_promedio_aterrizaje'] = np.mean(tiempos_aterrizaje)
+            else:
+                self.estadisticas['tiempo_promedio_aterrizaje'] = 0
+        else:
+            # si no hay aviones aterrizados, el promedio es 0
+            self.estadisticas['tiempo_promedio_aterrizaje'] = 0
         
         self.estadisticas['dias_completados'] = self.dias_simulacion
 
     def obtener_estadisticas(self) -> dict:
         """retorna un diccionario con las estadisticas de la simulacion"""
         return self.estadisticas.copy()
+    
+    def obtener_tiempos_aterrizaje(self) -> List[int]:
+        """retorna una lista con los tiempos totales de vuelo de todos los aviones que aterrizaron.
+        cada tiempo es la diferencia entre t_landing y t_spawn en minutos."""
+        tiempos = []
+        for avion in self.aviones_aterrizados:
+            tiempo_vuelo = avion.tiempo_total_vuelo()
+            if tiempo_vuelo is not None:
+                tiempos.append(tiempo_vuelo)
+        return tiempos
+    
+    def obtener_detalles_aterrizajes(self) -> List[dict]:
+        """retorna una lista de diccionarios con detalles de cada aterrizaje.
+        cada diccionario contiene: id, t_spawn, t_landing, tiempo_total_vuelo."""
+        detalles = []
+        for avion in self.aviones_aterrizados:
+            tiempo_vuelo = avion.tiempo_total_vuelo()
+            if tiempo_vuelo is not None:
+                detalles.append({
+                    'id': avion.id,
+                    't_spawn': avion.t_spawn,
+                    't_landing': avion.t_landing,
+                    'tiempo_total_vuelo': tiempo_vuelo
+                })
+        return detalles
 
     def reiniciar_simulacion(self) -> None:
         """reinicia la simulacion a su estado inicial"""
@@ -307,7 +347,8 @@ def ejecutar_multiples_simulaciones(lambda_param: float,
         'desvios_a_montevideo': [],
         'desvios_viento': [],
         'desvios_tormenta': [],
-        'desvios_cierre': []
+        'desvios_cierre': [],
+        'reincerciones_exitosas': []
     }
     
     for i in range(num_simulaciones):

@@ -39,6 +39,7 @@ class TestPlane(unittest.TestCase):
         self.assertEqual(avion.status, "en_fila")
         self.assertIsNone(avion.tiempo_estimado)
         self.assertEqual(avion.minutos_bloqueo, 0)
+        self.assertIsNone(avion.t_landing)  # nuevo atributo
         
     def test_velocidades_por_rango(self):
         """test: verificacion de velocidades maximas y minimas por rango de distancia"""
@@ -205,6 +206,32 @@ class TestPlane(unittest.TestCase):
         # debe seguir desviado y retroceder
         self.assertEqual(avion_desviado.status, "desviado")
         self.assertGreater(avion_desviado.x, 60.0)  # retrocedio
+        
+    def test_tiempo_total_vuelo_sin_aterrizar(self):
+        """test: tiempo_total_vuelo() retorna None si el avion no aterrizo"""
+        avion = Plane(id=1, t_spawn=100)
+        
+        # avion que no aterrizo
+        tiempo = avion.tiempo_total_vuelo()
+        self.assertIsNone(tiempo)
+        
+    def test_tiempo_total_vuelo_aterrizado(self):
+        """test: tiempo_total_vuelo() calcula correctamente el tiempo de vuelo"""
+        avion = Plane(id=1, t_spawn=100, t_landing=150)
+        
+        # tiempo de vuelo = 150 - 100 = 50 minutos
+        tiempo = avion.tiempo_total_vuelo()
+        self.assertEqual(tiempo, 50)
+        
+    def test_tiempo_total_vuelo_caso_borde(self):
+        """test: tiempo_total_vuelo() con casos borde"""
+        # aterrizaje inmediato
+        avion1 = Plane(id=1, t_spawn=100, t_landing=100)
+        self.assertEqual(avion1.tiempo_total_vuelo(), 0)
+        
+        # vuelo largo
+        avion2 = Plane(id=2, t_spawn=0, t_landing=1440)  # 24 horas
+        self.assertEqual(avion2.tiempo_total_vuelo(), 1440)
         
     def test_retroceder_con_bloqueo(self):
         """test: retroceder() respeta el bloqueo temporal"""
@@ -578,6 +605,54 @@ class TestEstadisticas(unittest.TestCase):
         self.assertEqual(len(sim.aviones_aterrizados), 0)
         self.assertEqual(len(sim.aviones_desviados), 0)
         self.assertEqual(sim.estadisticas['total_aviones'], 0)
+        
+    def test_obtener_tiempos_aterrizaje(self):
+        """test: obtener_tiempos_aterrizaje() retorna lista de tiempos de vuelo"""
+        sim = Simulacion(lambda_param=0.1, dias_simulacion=1)
+        
+        # crear aviones aterrizados con diferentes tiempos
+        avion1 = Plane(id=1, t_spawn=100, t_landing=150)  # 50 min
+        avion2 = Plane(id=2, t_spawn=200, t_landing=250)  # 50 min
+        avion3 = Plane(id=3, t_spawn=300, t_landing=400)  # 100 min
+        
+        sim.aviones_aterrizados = [avion1, avion2, avion3]
+        
+        tiempos = sim.obtener_tiempos_aterrizaje()
+        
+        # verificar que retorna los tiempos correctos
+        self.assertEqual(len(tiempos), 3)
+        self.assertIn(50, tiempos)
+        self.assertIn(100, tiempos)
+        self.assertEqual(tiempos.count(50), 2)  # dos aviones con 50 min
+        
+    def test_obtener_detalles_aterrizajes(self):
+        """test: obtener_detalles_aterrizajes() retorna detalles completos"""
+        sim = Simulacion(lambda_param=0.1, dias_simulacion=1)
+        
+        # crear avion aterrizado
+        avion = Plane(id=1, t_spawn=100, t_landing=150)
+        sim.aviones_aterrizados = [avion]
+        
+        detalles = sim.obtener_detalles_aterrizajes()
+        
+        # verificar estructura de respuesta
+        self.assertEqual(len(detalles), 1)
+        detalle = detalles[0]
+        
+        self.assertEqual(detalle['id'], 1)
+        self.assertEqual(detalle['t_spawn'], 100)
+        self.assertEqual(detalle['t_landing'], 150)
+        self.assertEqual(detalle['tiempo_total_vuelo'], 50)
+        
+    def test_obtener_tiempos_aterrizaje_sin_aterrizados(self):
+        """test: obtener_tiempos_aterrizaje() con lista vacia"""
+        sim = Simulacion(lambda_param=0.1, dias_simulacion=1)
+        
+        tiempos = sim.obtener_tiempos_aterrizaje()
+        self.assertEqual(len(tiempos), 0)
+        
+        detalles = sim.obtener_detalles_aterrizajes()
+        self.assertEqual(len(detalles), 0)
 
 class TestFuncionesAuxiliares(unittest.TestCase):
     """tests para funciones auxiliares y de utilidad"""
@@ -750,6 +825,36 @@ class TestIntegracion(unittest.TestCase):
         if avion.status == "aterrizaje_confirmado":
             self.assertIn(avion, sim.aviones_aterrizados)
             self.assertEqual(sim.estadisticas['aterrizados'], 1)
+            # verificar que se registro el tiempo de aterrizaje
+            self.assertIsNotNone(avion.t_landing)
+            self.assertGreater(avion.t_landing, avion.t_spawn)
+            
+    def test_tracking_tiempo_aterrizaje_durante_simulacion(self):
+        """test: verificar que se registra correctamente el tiempo de aterrizaje durante la simulacion"""
+        sim = Simulacion(lambda_param=0.1, dias_simulacion=1)
+        sim.tiempo_actual = 720  # 12:00 - aeropuerto abierto
+        
+        # crear avion muy cerca del aeropuerto para que aterrice rapido
+        avion = Plane(id=1, t_spawn=720, x=0.5, v=300)  # muy cerca
+        sim.aviones = [avion]
+        sim.estadisticas['total_aviones'] = 1
+        
+        # simular hasta que aterrice
+        pasos = 0
+        while avion.status != "aterrizaje_confirmado" and avion.status != "desviado" and pasos < 100:
+            sim.procesar_paso_temporal()
+            pasos += 1
+            
+        # si aterrizo, verificar que se registro el tiempo
+        if avion.status == "aterrizaje_confirmado":
+            self.assertIsNotNone(avion.t_landing)
+            self.assertGreaterEqual(avion.t_landing, sim.tiempo_actual - 1)  # debe ser reciente
+            self.assertGreater(avion.t_landing, avion.t_spawn)
+            
+            # verificar que el tiempo total de vuelo es correcto
+            tiempo_vuelo = avion.tiempo_total_vuelo()
+            self.assertIsNotNone(tiempo_vuelo)
+            self.assertEqual(tiempo_vuelo, avion.t_landing - avion.t_spawn)
 
 def ejecutar_todos_los_tests() -> bool:
     """funcion para ejecutar todos los tests y mostrar resultados"""

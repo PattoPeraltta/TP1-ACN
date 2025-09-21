@@ -13,6 +13,7 @@ class Plane:
     status: Status = "en_fila"              # Estado del avion
     tiempo_estimado: Optional[int] = None   # Estimacion simple de arribo en min
     minutos_bloqueo:int = 0
+    t_landing: Optional[int] = None         # Minuto en el que aterrizo (si aterrizo)
 
     # velocidad maxima dada el rango en el que esta
     def max_speed(self) -> float:
@@ -29,6 +30,13 @@ class Plane:
 
     def get_id(self) -> int:
         return self.id
+    
+    def tiempo_total_vuelo(self) -> Optional[int]:
+        """calcula el tiempo total de vuelo desde que aparecio hasta que aterrizo.
+        retorna None si el avion no aterrizo aun."""
+        if self.t_landing is None:
+            return None
+        return self.t_landing - self.t_spawn
 
     # setea velocidad aleatoria al avion respetando los limites del rango
     def set_speed(self) -> None:
