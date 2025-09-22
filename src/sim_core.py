@@ -40,7 +40,6 @@ class Simulacion:
                 'aterrizados': 0,
                 'desviados': 0,
                 'tiempo_promedio_aterrizaje': 0,
-                'congestiones': 0,
                 'desvios_a_montevideo': 0,
                 'dias_completados': 0,
                 'desvios_viento': 0,
@@ -99,6 +98,7 @@ class Simulacion:
     def generar_nuevo_avion(self) -> bool:
         """Genera k~Poisson(lambda) aviones si el aeropuerto está abierto. 
         Devuelve True si generó al menos 1."""
+        m = self.tiempo_actual % 1440
         if not self.esta_aeropuerto_abierto():
             return False
 
@@ -318,7 +318,6 @@ class Simulacion:
             'aterrizados': 0,
             'desviados': 0,
             'tiempo_promedio_aterrizaje': 0,
-            'congestiones': 0,
             'desvios_a_montevideo': 0,
             'dias_completados': 0,
             'desvios_viento': 0,
@@ -343,7 +342,6 @@ def ejecutar_multiples_simulaciones(lambda_param: float,
         'aterrizados': [],
         'desviados': [],
         'tiempo_promedio_aterrizaje': [],
-        'congestiones': [],
         'desvios_a_montevideo': [],
         'desvios_viento': [],
         'desvios_tormenta': [],
