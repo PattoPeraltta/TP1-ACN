@@ -75,7 +75,7 @@ class visualizador_videojuego:
             self.ax.axvspan(dmin, dmax, alpha=0.8, color=colores_rangos[i])
             
             # etiquetas de rangos
-            if dmax != 100:
+            if dmin != 100:
                 self.ax.text((dmin + dmax) / 2, -1.5, f'{dmin}-{dmax}mn', 
                            ha='center', va='center', fontsize=10, 
                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
