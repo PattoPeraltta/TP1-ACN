@@ -13,12 +13,13 @@ class visualizador_videojuego:
     """visualizador tipo videojuego para la simulacion de aviones"""
     
     def __init__(self, lambda_param: float, dias_simulacion: int = 3, viento: bool = False, p_go: float = 0.10,
-                 tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30) -> None:
+                 tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30, enable_metering: bool = False) -> None:
         self.sim = Simulacion(lambda_param=lambda_param, dias_simulacion=dias_simulacion, viento_activo=viento,
                               p_goaround=p_go,
                               storm_activa=tormenta,
                               storm_prob=p_tormenta,
-                              storm_duracion_min=t_dur)
+                              storm_duracion_min=t_dur,
+                              enable_metering=enable_metering)
         self.fig, self.ax = plt.subplots(figsize=(14, 8))
         self.setup_plot()
         
@@ -513,9 +514,11 @@ def main() -> None:
         tormenta = ask_bool("ingresa 'True' si puede haber tormenta (si no 'False'): ")
         p_tormenta = ask_prob_01("ingresa probabilidad diaria de tormenta (0-1): ") if tormenta else 0.0
         tiempo = ask_pos_int("ingresa duración (en minutos) de cada tormenta: ") if tormenta else 0
+
+        usar_metering = ask_bool("usar protocolo nuevo (metering)? True/False: ")
         
         viz = visualizador_videojuego(lambda_param, dias_simulacion, viento=dia_ventoso, p_go=p_go,
-                                  tormenta=tormenta, p_tormenta=p_tormenta, t_dur=tiempo)
+                                  tormenta=tormenta, p_tormenta=p_tormenta, t_dur=tiempo, enable_metering=usar_metering)
         viz.ejecutar_visualizacion()
         
     elif opcion == "2":
@@ -531,10 +534,12 @@ def main() -> None:
         tormenta = ask_bool("ingresa 'True' si puede haber tormenta (si no 'False'): ")
         p_tormenta = ask_prob_01("ingresa probabilidad diaria de tormenta (0-1): ") if tormenta else 0.0
         tiempo = ask_pos_int("ingresa duración (en minutos) de cada tormenta: ") if tormenta else 0
+
+        usar_metering = ask_bool("usar protocolo nuevo (metering)? True/False: ")
         
         from sim_core import ejecutar_multiples_simulaciones
         stats = ejecutar_multiples_simulaciones(lambda_param, dias_simulacion, num_sims,viento_activo=dia_ventoso, p_goaround=p_go,
-                                                storm_activa=tormenta, storm_prob=p_tormenta, storm_duracion_min=tiempo)
+                                                storm_activa=tormenta, storm_prob=p_tormenta, storm_duracion_min=tiempo, enable_metering = usar_metering)
         print("\nestadisticas finales:")
         for key, value in stats.items():
             print(f"{key}: {value['promedio']:.2f} ± {value['error_estandar']:.2f}")

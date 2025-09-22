@@ -25,6 +25,9 @@ class Simulacion:
     storm_prob: float = 0.0                        # prob diaria de que haya tormenta
     storm_duracion_min: int = 30                   # duración de cada tormenta
     storm_inicio_min: Optional[int] = None         # inicio programado para el día actual (si hay)
+
+    enable_metering: bool = False
+    _last_sta_meter: Optional[float] = None
     
     def __post_init__(self) -> None:
         """inicializa las listas vacias al crear la simulacion"""
@@ -99,7 +102,8 @@ class Simulacion:
     def generar_nuevo_avion(self) -> bool:
         """Genera k~Poisson(lambda) aviones si el aeropuerto está abierto. 
         Devuelve True si generó al menos 1."""
-        if not self.esta_aeropuerto_abierto():
+        m = self.tiempo_actual % 1440
+        if not self.esta_aeropuerto_abierto() and self._motivo_cierre_actual(m) != "tormenta":
             return False
 
         # k llegadas en este minuto (Poisson)
@@ -111,6 +115,9 @@ class Simulacion:
                 status="en_fila"
             )
             nuevo_avion.set_speed()  # si acá hay aleatoriedad, convendría migrarla también a NumPy
+
+            self._asignar_sta_meter(nuevo_avion)
+
             self.aviones.append(nuevo_avion)
             self.estadisticas['total_aviones'] += 1
 
@@ -127,6 +134,8 @@ class Simulacion:
         # limpiar programación anterior de tormenta y reprogramar para el nuevo día
         self.storm_inicio_min = None
         self._programar_tormenta_del_dia()
+
+        self._last_sta_meter = None
 
     def ordenar_aviones_por_distancia(self) -> None:
         """ordena los aviones por distancia al aeropuerto (mas cerca primero)"""
@@ -158,6 +167,7 @@ class Simulacion:
         m_actual = self.tiempo_actual % 1440
         motivo_ahora = self._motivo_cierre_actual(m_actual)
         motivo_antes = self._motivo_cierre_actual((m_actual - c.DT) % 1440)
+        self.generar_nuevo_avion()
         if motivo_ahora == "tormenta" and motivo_antes != "tormenta":
             minutos_bloqueo = self._minutos_hasta_apertura()
             for avion in self.aviones:
@@ -167,7 +177,6 @@ class Simulacion:
                     self.estadisticas["desvios_tormenta"] += 1
 
         # generar nuevo avion si corresponde
-        self.generar_nuevo_avion()
         
         # ordenar aviones por distancia
         self.ordenar_aviones_por_distancia()
@@ -181,6 +190,9 @@ class Simulacion:
             # el avion de atras es el que tiene indice mayor (i+1)
             avion_adelante = self.aviones[i-1] if i > 0 else None
             avion_atras = self.aviones[i+1] if i < len(self.aviones)-1 else None
+
+            if self.enable_metering:
+                avion.apply_metering(self.tiempo_actual)
             
             # hacer avanzar el avion
             status_antes = avion.status
@@ -326,6 +338,28 @@ class Simulacion:
             'desvios_tormenta': 0,
             'reincerciones_exitosas': 0     
         }
+    
+    def _asignar_sta_meter(self, avion: Plane):
+        """Define STA al meter point respetando la separación objetivo."""
+        if not self.enable_metering:
+            return
+        if avion.x <= c.METER_POINT_MN:
+            avion.metering = False
+            avion.sta_meter = None
+            return
+
+        tmin = u.tiempo_min_vmax_a_punto(avion.x, c.METER_POINT_MN)
+        sta_cand = self.tiempo_actual + tmin
+
+        if self._last_sta_meter is None:
+            sta = sta_cand
+        else:
+            sta = max(sta_cand, self._last_sta_meter + c.METER_TARGET_SPACING_MIN)
+
+        avion.sta_meter = sta
+        avion.metering  = True
+        self._last_sta_meter = sta
+
 
 def ejecutar_multiples_simulaciones(lambda_param: float,
                                     dias_simulacion: int,
@@ -334,7 +368,8 @@ def ejecutar_multiples_simulaciones(lambda_param: float,
                                     p_goaround: float = 0.10,
                                     storm_activa: bool = False,
                                     storm_prob: float = 0.0,
-                                    storm_duracion_min: int = 30) -> dict:
+                                    storm_duracion_min: int = 30,
+                                    enable_metering:bool = False) -> dict:
     """ejecuta multiples simulaciones y retorna estadisticas promedio"""
     print(f"ejecutando {num_simulaciones} simulaciones con lambda={lambda_param}")
     
@@ -343,7 +378,6 @@ def ejecutar_multiples_simulaciones(lambda_param: float,
         'aterrizados': [],
         'desviados': [],
         'tiempo_promedio_aterrizaje': [],
-        'congestiones': [],
         'desvios_a_montevideo': [],
         'desvios_viento': [],
         'desvios_tormenta': [],
@@ -360,7 +394,8 @@ def ejecutar_multiples_simulaciones(lambda_param: float,
             p_goaround=p_goaround,
             storm_activa=storm_activa,
             storm_prob=storm_prob,
-            storm_duracion_min=storm_duracion_min
+            storm_duracion_min=storm_duracion_min,
+            enable_metering=enable_metering
         )
         sim.ejecutar_simulacion_completa()
         

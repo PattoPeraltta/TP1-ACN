@@ -14,6 +14,8 @@ class Plane:
     tiempo_estimado: Optional[int] = None   # Estimacion simple de arribo en min
     minutos_bloqueo:int = 0
     t_landing: Optional[int] = None         # Minuto en el que aterrizo (si aterrizo)
+    sta_meter: Optional[float] = None
+    metering: bool = False
 
     # velocidad maxima dada el rango en el que esta
     def max_speed(self) -> float:
@@ -129,7 +131,11 @@ class Plane:
         
         # me fijo si entra en un nuevo rango
         if rango_antes != self.rango_actual():
-            self.set_max_speed()
+            if self.metering:
+                # protocolo nuevo: no randomices; recortá a límites del rango
+                self.v = u.clamp(self.v, self.min_speed(), self.max_speed())
+            else:
+                self.set_speed()
             
         if (other is not None and 
             other.status != "desviado" and 
@@ -203,5 +209,28 @@ class Plane:
         self.status = "desviado"
         self.v = 200
         self.tiempo_estimado = -1 # Pongo en -1 porque no se pouede calcular cuanto va a tardar
+    
+    def apply_metering(self, now_min: int):
+        """Aplica micro-ajuste de velocidad vs STA si el protocolo nuevo está activo."""
+        if not self.metering or self.sta_meter is None:
+            return
+        if self.status in {"desviado", "aterrizado"}:
+            return
+        if self.x <= c.METER_POINT_MN:
+            return
+
+        eat = u.eta_const_speed_to_point(self.x, self.v, c.METER_POINT_MN, now_min)
+        error_min = self.sta_meter - eat                     # >0: tarde, <0: temprano
+        deadband_min = c.METER_DEADBAND_SEC / 60.0
+
+        if error_min < -deadband_min:                        # va temprano -> bajar v
+            new_v = self.v - c.METER_SPEED_STEP
+            self.v = u.clamp(new_v, self.min_speed(), self.max_speed())
+            if self.v < new_v + 1e-9:                        # bajó realmente
+                self.status = "desacelerando"
+        elif error_min > deadband_min:                       # va tarde -> subir v
+            new_v = self.v + c.METER_SPEED_STEP
+            self.v = u.clamp(new_v, self.min_speed(), self.max_speed())
+
 
 
