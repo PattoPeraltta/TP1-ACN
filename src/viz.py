@@ -9,8 +9,8 @@ from utilidades import ask_bool, ask_pos_int, ask_prob_01
 import const as c
 from typing import List, Dict, Any, Optional
 
+# visualizador tipo videojuego para la simulacion de aviones
 class visualizador_videojuego:
-    """visualizador tipo videojuego para la simulacion de aviones"""
     
     def __init__(self, lambda_param: float, dias_simulacion: int = 3, viento: bool = False, p_go: float = 0.10,
                  tormenta: bool = False, p_tormenta: float = 0.0,  t_dur: int = 30, enable_metering: bool = False) -> None:
@@ -52,7 +52,7 @@ class visualizador_videojuego:
         self.setup_controls()
         
     def setup_plot(self) -> None:
-        """configura el grafico principal"""
+        # configura el grafico principal
         self.fig.subplots_adjust(bottom=0.15)
         self.ax.set_xlim(-10, 110)  # espacio extra para aviones desviados
         self.ax.set_ylim(-2, 2)
@@ -64,18 +64,15 @@ class visualizador_videojuego:
         
         self.ax.grid(True, alpha=0.3)
 
-        # dibujar pista de aterrizaje
-        self.ax.axvline(x=0, color='black', linewidth=3, label='pista de aterrizaje')
+        self.ax.axvline(x=0, color='black', linewidth=3, label='pista de aterrizaje') # dibujar pista de aterrizaje
         
-        # dibujar rangos de velocidad con colores
-        colores_rangos = ['#ffffff', '#ffcccc', '#ffe6cc', '#fafaaf', '#ccffcc']
+        colores_rangos = ['#ffffff', '#ffcccc', '#ffe6cc', '#fafaaf', '#ccffcc'] # dibujar rangos de velocidad con colores
         for i, (dmin, dmax, _) in enumerate(c.rangos):
             if dmax == float('inf'):
                 dmax = 100
             self.ax.axvspan(dmin, dmax, alpha=0.8, color=colores_rangos[i])
             
-            # etiquetas de rangos
-            if dmin != 100:
+            if dmin != 100: # etiquetas de rangos
                 self.ax.text((dmin + dmax) / 2, -1.5, f'{dmin}-{dmax}mn', 
                            ha='center', va='center', fontsize=10, 
                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
@@ -84,41 +81,35 @@ class visualizador_videojuego:
                            ha='center', va='center', fontsize=10,
                            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
         
-        # texto de informacion
-        self.texto_info = self.ax.text(0.02, 0.98, '', transform=self.ax.transAxes,
+        self.texto_info = self.ax.text(0.02, 0.98, '', transform=self.ax.transAxes, # texto de informacion
                                       verticalalignment='top', fontsize=10,
                                       bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
         
-        # texto de estadisticas
-        self.texto_stats = self.ax.text(0.98, 0.98, '', transform=self.ax.transAxes,
+        self.texto_stats = self.ax.text(0.98, 0.98, '', transform=self.ax.transAxes, # texto de estadisticas
                                        verticalalignment='top', horizontalalignment='right', fontsize=10,
                                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8))
         
-        # elementos para indicador de tormenta
         self.storm_indicator_lines = []  # lista para almacenar las lineas diagonales
         self.storm_text = None  # texto "TORMENTA"
         
     def obtener_aviones_interpolados(self) -> List[Plane]:
-        """retorna posiciones interpoladas de los aviones para movimiento suave"""
+        # retorna posiciones interpoladas de los aviones para movimiento suave
         if not self.aviones_anterior or not self.sim.aviones:
             return self.sim.aviones
         
-        # calcular factor de interpolacion basado en tiempo acumulado
-        intervalo_requerido = self.intervalo_simulacion_base / self.velocidad_multiplier
+        intervalo_requerido = self.intervalo_simulacion_base / self.velocidad_multiplier # calcular factor de interpolacion basado en tiempo acumulado
         factor = min(1.0, self.tiempo_acumulado / intervalo_requerido)
         
         aviones_interpolados = []
         for avion_actual in self.sim.aviones:
-            # buscar avion correspondiente en la posicion anterior
-            avion_anterior = None
+            avion_anterior = None # buscar avion correspondiente en la posicion anterior
             for avion_ant in self.aviones_anterior:
                 if avion_ant.id == avion_actual.id:
                     avion_anterior = avion_ant
                     break
             
             if avion_anterior:
-                # interpolacion normal para todos los casos (incluyendo reinsercion)
-                # esto permite ver el movimiento suave hacia atras durante la reinsercion
+                # interpolacion normal para todos los casos (incluyendo reinsercion), esto permite ver el movimiento suave hacia atras durante la reinsercion
                 avion_interp = Plane(
                     id=avion_actual.id,
                     t_spawn=avion_actual.t_spawn,
@@ -129,32 +120,25 @@ class visualizador_videojuego:
                 )
                 aviones_interpolados.append(avion_interp)
             else:
-                # si no hay posicion anterior, usar posicion actual
-                aviones_interpolados.append(avion_actual)
+                aviones_interpolados.append(avion_actual) # si no hay posicion anterior, usar posicion actual
         
         return aviones_interpolados
     
     def dibujar_indicador_tormenta(self) -> None:
-        """dibuja el indicador visual de tormenta en el eje Y"""
-        # limpiar indicadores anteriores
-        self.limpiar_indicador_tormenta()
+        # dibuja el indicador visual de tormenta en el eje y
+        self.limpiar_indicador_tormenta() # limpiar indicadores anteriores
         
-        # verificar si hay tormenta activa usando la funcion existente
-        m_actual = self.sim.tiempo_actual % 1440
+        m_actual = self.sim.tiempo_actual % 1440 # verificar si hay tormenta activa usando la funcion existente
         motivo_cierre = self.sim._motivo_cierre_actual(m_actual)
         
         if motivo_cierre == "tormenta":
-            # dibujar linea vertical central
-            self.ax.axvline(x=0, color='black', linewidth=4, alpha=0.8)
+            self.ax.axvline(x=0, color='black', linewidth=4, alpha=0.8) # dibujar linea vertical central
             
-            # dibujar lineas diagonales rojas
-            num_lineas = 11
+            num_lineas = 11 # dibujar lineas diagonales rojas
             for i in range(num_lineas):
-                # calcular posicion y de la linea diagonal
-                y_pos = -1.5 + (i * 3.0 / (num_lineas - 1))
+                y_pos = -1.5 + (i * 3.0 / (num_lineas - 1)) # calcular posicion y de la linea diagonal
                 
-                # dibujar linea diagonal (pendiente positiva)
-                x_start = -3
+                x_start = -3 # dibujar linea diagonal (pendiente positiva)
                 x_end = 3
                 y_start = y_pos - 0.3
                 y_end = y_pos + 0.3
@@ -163,8 +147,7 @@ class visualizador_videojuego:
                                    color='red', linewidth=6, alpha=0.8)[0]
                 self.storm_indicator_lines.append(linea)
             
-            # agregar texto "TORMENTA" en el eje Y, rotado 90 grados
-            self.storm_text = self.ax.text(0, 0, 'TORMENTA', 
+            self.storm_text = self.ax.text(0, 0, 'TORMENTA', # agregar texto "TORMENTA" en el eje y, rotado 90 grados
                                          ha='center', va='center', fontsize=16, 
                                          fontweight='bold', color='red',
                                          rotation=90,
@@ -173,29 +156,25 @@ class visualizador_videojuego:
                                                  edgecolor='red', linewidth=2))
     
     def limpiar_indicador_tormenta(self) -> None:
-        """limpia el indicador de tormenta del grafico"""
-        # remover lineas diagonales
-        for linea in self.storm_indicator_lines:
+        # limpia el indicador de tormenta del grafico
+        for linea in self.storm_indicator_lines: # remover lineas diagonales
             linea.remove()
         self.storm_indicator_lines.clear()
         
-        # remover texto
-        if self.storm_text is not None:
+        if self.storm_text is not None: # remover texto
             self.storm_text.remove()
             self.storm_text = None
     
     def calcular_posicion_y(self, avion) -> float:
-        """calcula la posicion y con animacion vertical suave"""
+        # calcula la posicion y con animacion vertical suave
         avion_id = avion.id
         
-        # posiciones objetivo segun el estado
-        if avion.status == "desviado":
+        if avion.status == "desviado": # posiciones objetivo segun el estado
             y_objetivo = 0.8  # fila superior para aviones desviados
         else:
             y_objetivo = 0.0  # fila principal para todos los demas aviones
         
-        # inicializar animacion si no existe
-        if avion_id not in self.aviones_vertical_animation:
+        if avion_id not in self.aviones_vertical_animation: # inicializar animacion si no existe
             self.aviones_vertical_animation[avion_id] = {
                 'y_actual': y_objetivo,
                 'y_objetivo': y_objetivo,
@@ -204,15 +183,12 @@ class visualizador_videojuego:
         
         animacion = self.aviones_vertical_animation[avion_id]
         
-        # actualizar objetivo si cambio el estado
-        if animacion['y_objetivo'] != y_objetivo:
+        if animacion['y_objetivo'] != y_objetivo: # actualizar objetivo si cambio el estado
             animacion['y_objetivo'] = y_objetivo
         
-        # escalar velocidad de animacion con el multiplicador de velocidad de simulacion
-        velocidad_animacion_escalada = animacion['velocidad_animacion_base'] * self.velocidad_multiplier
+        velocidad_animacion_escalada = animacion['velocidad_animacion_base'] * self.velocidad_multiplier # escalar velocidad de animacion con el multiplicador de velocidad de simulacion
         
-        # interpolar hacia el objetivo
-        diferencia = animacion['y_objetivo'] - animacion['y_actual']
+        diferencia = animacion['y_objetivo'] - animacion['y_actual'] # interpolar hacia el objetivo
         if abs(diferencia) > 0.01:  # solo animar si hay diferencia significativa
             animacion['y_actual'] += diferencia * velocidad_animacion_escalada
         else:
@@ -221,7 +197,7 @@ class visualizador_videojuego:
         return animacion['y_actual']
     
     def limpiar_animaciones_aviones_removidos(self) -> None:
-        """limpia las animaciones de aviones que ya no estan en la simulacion"""
+        # limpia las animaciones de aviones que ya no estan en la simulacion
         aviones_actuales_ids = {avion.id for avion in self.sim.aviones}
         aviones_a_remover = []
         
@@ -233,46 +209,37 @@ class visualizador_videojuego:
             del self.aviones_vertical_animation[avion_id]
         
     def limpiar_aviones_y_etiquetas(self) -> None:
-        """limpia todos los aviones y etiquetas del grafico"""
-        # limpiar aviones anteriores
-        for artista in self.ax.collections[:]:
+        # limpia todos los aviones y etiquetas del grafico
+        for artista in self.ax.collections[:]: # limpiar aviones anteriores
             if hasattr(artista, '_es_avion'):
                 artista.remove()
         
-        # limpiar etiquetas de texto anteriores
-        for artista in self.ax.texts[:]:
+        for artista in self.ax.texts[:]: # limpiar etiquetas de texto anteriores
             if hasattr(artista, '_es_etiqueta_avion'):
                 artista.remove()
         
     def dibujar_aviones(self) -> None:
-        """dibuja todos los aviones en el grafico"""
-        # limpiar aviones y etiquetas anteriores
-        self.limpiar_aviones_y_etiquetas()
+        # dibuja todos los aviones en el grafico
+        self.limpiar_aviones_y_etiquetas() # limpiar aviones y etiquetas anteriores
         
-        # limpiar animaciones de aviones removidos
-        self.limpiar_animaciones_aviones_removidos()
+        self.limpiar_animaciones_aviones_removidos() # limpiar animaciones de aviones removidos
         
-        # obtener aviones interpolados para movimiento suave
-        aviones_a_dibujar = self.obtener_aviones_interpolados()
+        aviones_a_dibujar = self.obtener_aviones_interpolados() # obtener aviones interpolados para movimiento suave
         
         if not aviones_a_dibujar:
             return
             
-        # dibujar cada avion
-        for i, avion in enumerate(aviones_a_dibujar):
+        for i, avion in enumerate(aviones_a_dibujar): # dibujar cada avion
             color = self.colores_estado.get(avion.status, '#000000')
             
-            # calcular posicion y con animacion vertical
-            y_pos = self.calcular_posicion_y(avion)
+            y_pos = self.calcular_posicion_y(avion) # calcular posicion y con animacion vertical
             
-            # dibujar avion como circulo
-            avion_artista = self.ax.scatter(avion.x, y_pos, 
+            avion_artista = self.ax.scatter(avion.x, y_pos, # dibujar avion como circulo
                                           color=color, s=150, alpha=0.8, 
                                           edgecolors='black', linewidth=1)
             avion_artista._es_avion = True
             
-            # etiqueta simplificada con solo id, status y velocidad
-            status_abreviado = {
+            status_abreviado = { # etiqueta simplificada con solo id, status y velocidad
                 'en_fila': 'FILA',
                 'desacelerando': 'DESAC',
                 'reinsercion': 'REINS',
@@ -290,7 +257,7 @@ class visualizador_videojuego:
             etiqueta._es_etiqueta_avion = True
     
     def actualizar_informacion(self) -> None:
-        """actualiza la informacion de tiempo y estado"""
+        # actualiza la informacion de tiempo y estado
         hora_actual = self.sim.obtener_hora_actual()
         dia_actual = self.sim.obtener_dia_actual()
         aeropuerto_abierto = self.sim.esta_aeropuerto_abierto()
@@ -312,8 +279,7 @@ class visualizador_videojuego:
         
         self.texto_info.set_text(info_text)
         
-        # estadisticas
-        stats = self.sim.obtener_estadisticas()
+        stats = self.sim.obtener_estadisticas() # estadisticas
         stats_text = f"aviones activos: {len(self.sim.aviones)}\n"
         stats_text += f"total generados: {stats['total_aviones']}\n"
         stats_text += f"aterrizados: {stats['aterrizados']}\n"
@@ -327,7 +293,7 @@ class visualizador_videojuego:
     
     
     def animar(self, frame) -> None:
-        """funcion de animacion principal con interpolacion suave"""
+        # funcion de animacion principal con interpolacion suave
         if self.paused:
             return
 
@@ -335,16 +301,13 @@ class visualizador_videojuego:
         delta_tiempo = tiempo_actual - self.ultimo_tiempo_simulacion
         self.ultimo_tiempo_simulacion = tiempo_actual
         
-        # acumular tiempo y procesar pasos de simulacion segun la velocidad
-        self.tiempo_acumulado += delta_tiempo
+        self.tiempo_acumulado += delta_tiempo # acumular tiempo y procesar pasos de simulacion segun la velocidad
         intervalo_requerido = self.intervalo_simulacion_base / self.velocidad_multiplier
         
-        # procesar pasos de simulacion si ha pasado suficiente tiempo
-        while self.tiempo_acumulado >= intervalo_requerido:
+        while self.tiempo_acumulado >= intervalo_requerido: # procesar pasos de simulacion si ha pasado suficiente tiempo
             self.tiempo_acumulado -= intervalo_requerido
             
-            # guardar posiciones anteriores para interpolacion
-            self.aviones_anterior = []
+            self.aviones_anterior = [] # guardar posiciones anteriores para interpolacion
             for avion in self.sim.aviones:
                 avion_copia = Plane(
                     id=avion.id,
@@ -356,21 +319,18 @@ class visualizador_videojuego:
                 )
                 self.aviones_anterior.append(avion_copia)
             
-            # procesar paso de simulacion
-            if self.sim.tiempo_actual < self.sim.dias_simulacion * 1440:
+            if self.sim.tiempo_actual < self.sim.dias_simulacion * 1440: # procesar paso de simulacion
                 self.sim.procesar_paso_temporal()
             else:
-                # simulacion terminada
-                self.mostrar_estadisticas_finales()
+                self.mostrar_estadisticas_finales() # simulacion terminada
                 return
         
-        # actualizar visualizacion con interpolacion (siempre, para movimiento suave)
-        self.dibujar_aviones()
+        self.dibujar_aviones() # actualizar visualizacion con interpolacion (siempre, para movimiento suave)
         self.dibujar_indicador_tormenta()
         self.actualizar_informacion()
     
     def mostrar_estadisticas_finales(self) -> None:
-        """muestra las estadisticas finales cuando termina la simulacion"""
+        # muestra las estadisticas finales cuando termina la simulacion
         self.sim.calcular_estadisticas_finales()
         stats = self.sim.obtener_estadisticas()
         
@@ -397,17 +357,14 @@ class visualizador_videojuego:
         print("="*50)
     
     def ejecutar_visualizacion(self) -> None:
-        """ejecuta la visualizacion tipo videojuego"""
+        # ejecuta la visualizacion tipo videojuego
         print("iniciando visualizacion tipo videojuego...")
         
         try:
-            # crear animacion con interpolacion suave
-            # usar intervalo fijo y controlar velocidad con el multiplicador
-            anim = animation.FuncAnimation(self.fig, self.animar, 
-                                         interval=33,  # ~30 FPS para movimiento suave
+            anim = animation.FuncAnimation(self.fig, self.animar, # crear animacion con interpolacion suave, usar intervalo fijo y controlar velocidad con el multiplicador
+                                         interval=33,  # ~30 fps para movimiento suave
                                          blit=False, repeat=False, cache_frame_data=False)
             
-            # plt.tight_layout()
             plt.show()
             
         except KeyboardInterrupt:
@@ -415,98 +372,53 @@ class visualizador_videojuego:
             self.mostrar_estadisticas_finales()
 
     def setup_controls(self) -> None:
-        """agrega controles interactivos de velocidad, play/pausa y reset"""
-        # slider horizontal de velocidad
-        ax_speed = plt.axes([0.15, 0.02, 0.3, 0.03])
+        # agrega controles interactivos de velocidad, play/pausa y reset
+        ax_speed = plt.axes([0.15, 0.02, 0.3, 0.03]) # slider horizontal de velocidad
         self.slider_velocidad = Slider(ax_speed, 'Velocidad', 0.1, 20.0, valinit=1.0)
         self.slider_velocidad.on_changed(self.cambiar_velocidad)
 
-        # botón de play/pausa
-        ax_pause = plt.axes([0.50, 0.02, 0.08, 0.03])
+        ax_pause = plt.axes([0.50, 0.02, 0.08, 0.03]) # botón de play/pausa
         self.pause_button = Button(ax_pause, 'Pausa')
         self.pause_button.on_clicked(self.toggle_pause)
 
-        # boton de reset
-        ax_reset = plt.axes([0.60, 0.02, 0.08, 0.03])
+        ax_reset = plt.axes([0.60, 0.02, 0.08, 0.03]) # boton de reset
         self.reset_button = Button(ax_reset, 'Reset Sim')
         self.reset_button.on_clicked(self.reset_velocidad)
 
     def cambiar_velocidad(self, val) -> None:
-        """se llama cuando se modifica el slider de velocidad"""
+        # se llama cuando se modifica el slider de velocidad
         self.velocidad_multiplier = val
     
     def toggle_pause(self, event) -> None:
-        """toggle de play/pausa"""
+        # toggle de play/pausa
         self.paused = not self.paused
         self.pause_button.label.set_text('Reanudar' if self.paused else 'Pausa')
 
     def reset_velocidad(self, event) -> None:
-        """resetea toda la simulacion a su estado inicial"""
-        # resetear la simulacion
-        self.sim.reiniciar_simulacion()
+        # resetea toda la simulacion a su estado inicial
+        self.sim.reiniciar_simulacion() # resetear la simulacion
         
-        # resetear estado de visualizacion
-        self.aviones_anterior = []
+        self.aviones_anterior = [] # resetear estado de visualizacion
         self.aviones_vertical_animation = {}
         self.tiempo_acumulado = 0.0
         self.ultimo_tiempo_simulacion = time.time()
         
-        # resetear controles
-        self.velocidad_multiplier = 1.0
+        self.velocidad_multiplier = 1.0 # resetear controles
         self.paused = False
         self.slider_velocidad.reset()
         self.pause_button.label.set_text('Pausa')
 
-def ejecutar_analisis_completo() -> Dict[str, Any]:
-    """ejecuta el analisis completo segun la consigna"""
-    print("=== analisis completo del sistema de aproximacion de aviones ===\n")
-    
-    # 2) calcular lambda para 1 avion por hora
-    lambda_1_por_hora = 1.0 / 60.0
-    print(f"2) lambda para 1 avion por hora: {lambda_1_por_hora:.6f}")
-    
-    # 3) estimar probabilidad de 5 aviones en 1 hora
-    print("\n3) estimando probabilidad de 5 aviones en 1 hora...")
-    from sim_core import estimar_probabilidad_5_aviones_en_1_hora
-    prob_5 = estimar_probabilidad_5_aviones_en_1_hora(lambda_1_por_hora, 1000)
-    print(f"probabilidad simulada: {prob_5['probabilidad_simulada']:.4f}")
-    print(f"probabilidad teorica: {prob_5['probabilidad_teorica']:.4f}")
-    print(f"error relativo: {prob_5['error_relativo']:.4f}")
-    
-    # 4) simular con diferentes valores de lambda
-    print("\n4) simulando con diferentes valores de lambda...")
-    lambdas = [0.02, 0.1, 0.2, 0.5, 1.0]
-    dias_simulacion = 5  # 5 dias para estadisticas robustas
-    
-    resultados = {}
-    for lam in lambdas:
-        print(f"\nsimulando con lambda = {lam}...")
-        from sim_core import ejecutar_multiples_simulaciones
-        stats = ejecutar_multiples_simulaciones(lam, dias_simulacion, 3)
-        resultados[lam] = stats
-        
-        print(f"promedio de aviones generados: {stats['total_aviones']['promedio']:.1f} ± {stats['total_aviones']['error_estandar']:.1f}")
-        print(f"promedio de aterrizados: {stats['aterrizados']['promedio']:.1f} ± {stats['aterrizados']['error_estandar']:.1f}")
-        print(f"promedio de desviados: {stats['desviados']['promedio']:.1f} ± {stats['desviados']['error_estandar']:.1f}")
-        if stats['total_aviones']['promedio'] > 0:
-            tasa_desvio = stats['desviados']['promedio']/stats['total_aviones']['promedio']*100
-            print(f"tasa de desvio: {tasa_desvio:.1f}%")
-    
-    return resultados
-
-# funcion principal para ejecutar la visualizacion
 def main() -> None:
-    """funcion principal para ejecutar la simulacion con visualizacion"""
+    # funcion principal para ejecutar la simulacion con visualizacion
     print("simulador de aproximacion de aviones - aep")
     print("selecciona una opcion:")
-    print("1. visualizacion tipo videojuego")
-    print("2. analisis completo")
-    print("3. simulacion con parametros personalizados")
+    print("1. visualización")
+    print("2. simulacion con parametros personalizados")
     
-    opcion = input("ingresa tu opcion (1-3): ")
+    opcion = input("ingresa tu opcion (1-2): ")
     
     if opcion == "1":
-        lambda_param = float(input("ingresa lambda (ej: 0.0167 para 1 avion/hora): "))
+        lambda_param = float(input("ingresa lambda: "))
         dias_simulacion = int(input("ingresa cantidad de dias a simular (ej: 3): "))
         dia_ventoso = ask_bool("ingresa 'True' si los dias son ventosos (si no 'False'): ")
         p_go = ask_prob_01("ingresa probabilidad de go-around por viento (0-1): ") if dia_ventoso else 0.0
@@ -522,9 +434,6 @@ def main() -> None:
         viz.ejecutar_visualizacion()
         
     elif opcion == "2":
-        ejecutar_analisis_completo()
-        
-    elif opcion == "3":
         lambda_param = float(input("ingresa lambda: "))
         dias_simulacion = int(input("ingresa cantidad de dias: "))
         num_sims = int(input("ingresa numero de simulaciones: "))

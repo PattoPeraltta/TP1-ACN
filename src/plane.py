@@ -6,10 +6,10 @@ import const as c
 Status = Literal["en_fila", "desacelerando", "reinsercion", "desviado", "aterrizaje_confirmado", "intento_aterrizar"]
 @dataclass
 class Plane:
-    id: int                   # Id identificador
-    t_spawn: int              # Minuto en el que aparecio
-    x: float = 100.0          # Distancia al AEP en mn
-    v: float = 0.0            # Velocidad del avion en nudos
+    id: int                                 # Id identificador
+    t_spawn: int                            # Minuto en el que aparecio
+    x: float = 100.0                        # Distancia al AEP en mn
+    v: float = 0.0                          # Velocidad del avion en nudos
     status: Status = "en_fila"              # Estado del avion
     tiempo_estimado: Optional[int] = None   # Estimacion simple de arribo en min
     minutos_bloqueo:int = 0
@@ -27,12 +27,15 @@ class Plane:
         mix_speed = u.velocidad_permitida(self.x)[0]
         return mix_speed
 
+    # devuelve el estado del avion
     def get_status(self) -> Status:
         return self.status
 
+    # devuelve el id del avion
     def get_id(self) -> int:
         return self.id
     
+    # calcula el tiempo total de vuelo desde que aparecio hasta que aterrizo
     def tiempo_total_vuelo(self) -> Optional[int]:
         """calcula el tiempo total de vuelo desde que aparecio hasta que aterrizo.
         retorna None si el avion no aterrizo aun."""
@@ -48,8 +51,7 @@ class Plane:
     # setea la maxima velocidad permitida en el rango al avion
     def set_max_speed(self) -> None:
         self.v = self.max_speed()
-        # si estaba desacelerando, volver a estado normal
-        if self.status == "desacelerando":
+        if self.status == "desacelerando": # si estaba desacelerando, vuelve al estado normal
             self.status = "en_fila"
         return
 
@@ -58,26 +60,22 @@ class Plane:
         for dmin, dmax, _ in c.rangos:
             if dmin <= self.x < dmax:
                 return (dmin, dmax)
-        return (c.rangos[-1][0], c.rangos[-1][1]) # fallback para cuando esta en rango (0, 5)
+        return (c.rangos[-1][0], c.rangos[-1][1]) # fallback para cuando esta en rango (0, 5) 
 
+    # verifica si el avion self esta a menos de 4 minutos de other
     def distancia_menor_4(self, other) -> bool:
         if other is None:
             return False
-        
-        # Verificar que other esté realmente adelante
-        if other.x >= self.x:
+        if other.x >= self.x: # verificar que other esté realmente adelante
             return False
         
-        # Calcular distancia física actual
-        distancia_actual = self.x - other.x  # en millas náuticas
+        distancia_actual = self.x - other.x  # calcular distancia física actual en millas náuticas
         
-        # Convertir a tiempo basado en la velocidad actual de self
-        # Si self mantiene su velocidad actual, ¿cuánto tardará en alcanzar donde está other ahora?
-        tiempo_para_alcanzar = distancia_actual / (self.v / 60)  # en minutos
+        tiempo_para_alcanzar = distancia_actual / (self.v / 60)  # convertir a tiempo basado en la velocidad actual de self 
         
-        # Considerar "muy cerca" si está a menos de 4 minutos con su velocidad actual
         return tiempo_para_alcanzar < 4
 
+    # verifica si el avion self esta a mas de 5 minutos de other
     def distancia_mayor_5(self, other) -> bool:
         if other is None:
             return True
@@ -99,7 +97,7 @@ class Plane:
             if self.x <= rango_actual:
                 tiempo_estimado += u.tiempo_min_para_mn(self.v,rango_actual-rango_anterior)
                 break
-            # Calculo el tiempo que tardo en completar un rango entero, como es no inclucibe el maximo de los rangos uso el rango anterior para calcular la velocidad max
+            # calculo el tiempo que tardo en completar un rango entero, como es no inclucibe el maximo de los rangos uso el rango anterior para calcular la velocidad max
             velocidad_de_ese_rango = u.velocidad_permitida(rango_anterior)[1]
             tiempo_estimado += u.tiempo_min_para_mn(velocidad_de_ese_rango,rango_actual)
             rango_anterior = rango_actual
@@ -107,32 +105,29 @@ class Plane:
 
     # hace avanzar al avion, calcula nuevo rango y se fija si hay que desacelerar 
     def avanzar(self,other,third) -> None:
-        # si ya aterizo no hago nada
-        if self.status == "aterrizaje_confirmado":
+        
+        if self.status == "aterrizaje_confirmado": # si ya aterizo no hago nada
             return
-        # si con este step llega al aeropuerto termina
-        if self.x <= self.v/60 * c.DT and self.status != "desviado":
+
+        if self.x <= self.v/60 * c.DT and self.status != "desviado": # si con este step llega al aeropuerto termina
             self.status = "intento_aterrizar"
             self.tiempo_estimado = 0
             return
         
-        # si esta desviado retrocede en vez de avanzar y se fija si hay un gap de 10 min
-        if self.status == "desviado":
+        
+        if self.status == "desviado": # si esta desviado retrocede en vez de avanzar y se fija si hay un gap de 10 min
             self.retroceder(other,third)
-            return  # importante: salir aqui para no ejecutar el resto del codigo
+            return
 
-        if self.status == "reinsercion":
+        if self.status == "reinsercion": # si estaba reinsertando, vuelve a la fila
             self.status = "en_fila"
         
-        rango_antes = self.rango_actual()
-
-        # calcular la nueva posicion (solo para aviones no desviados)
-        self.x -= self.v/60 * c.DT
+        rango_antes = self.rango_actual() # rango antes de avanzar
+        self.x -= self.v/60 * c.DT # nueva posicion
         
-        # me fijo si entra en un nuevo rango
-        if rango_antes != self.rango_actual():
-            if self.metering:
-                # protocolo nuevo: no randomices; recortá a límites del rango
+        
+        if rango_antes != self.rango_actual():# me fijo si entra en un nuevo rango
+            if self.metering: # protocolo nuevo (ejercicio 7)
                 self.v = u.clamp(self.v, self.min_speed(), self.max_speed())
             else:
                 self.set_speed()
@@ -140,44 +135,39 @@ class Plane:
         if (other is not None and 
             other.status != "desviado" and 
             other.x < self.x and 
-            self.distancia_menor_4(other)):
+            self.distancia_menor_4(other)): # si esta a menos de 4 minutos de other, desacelera
             self.set_desacelerando(other)
             return
 
-        # Verificar si puede volver a velocidad máxima
         elif (self.status == "desacelerando" and 
             (other is None or 
             other.x >= self.x or 
             other.status == "desviado" or 
-            self.distancia_mayor_5(other))):
+            self.distancia_mayor_5(other))):   # verificasi puede dejar de desacelerar y volver a velocidad máxima
             self.set_speed()
 
         self.time_to_arrive()       
     
     # hace retroceder al avion desviado y evalua reinsercion
     def retroceder(self, other, third) -> None:
-        # 1) alejarse (desviado)
-        self.x += (self.v / 60.0) * c.DT
 
-        # 2) bloqueo activo: consumir y no intentar reinserción
-        if self.minutos_bloqueo > 0:
+        self.x += (self.v / 60.0) * c.DT # nueva posición (se suma distancia porque se esta alejando del aeropuerto)
+
+        if self.minutos_bloqueo > 0: # si hay bloqueo, se reduce el tiempo de bloqueo
             self.minutos_bloqueo = max(0, self.minutos_bloqueo - c.DT)
             return
 
-        # 3) gap entre dos aviones (other = adelante, third = atrás)
-        if other is not None and third is not None:
-            distancia_gap = third.x - other.x  # OJO: signo correcto
+        if other is not None and third is not None: # si hay avion de adelante y atras, se verifica si hay gap de 10 minutos
+            distancia_gap = third.x - other.x  
             if distancia_gap >= (self.v / 60.0) * 10.0:
                 punto_medio = other.x + distancia_gap / 2.0
-                # reinsertar solo si caigo en la mitad trasera y quedo > 5 mn de AEP
-                if other.x < self.x <= punto_medio and punto_medio > 5.0:
+                if other.x < self.x <= punto_medio and punto_medio > 5.0: # reinsertar si estoy antes del punto medio en el espacio entre los otros dos aviones
                     self.x = punto_medio
                     self.status = "reinsercion"
                     self.set_speed()
             return
 
-        # 4) gap entre el último avión y las 100 mn
-        if other is not None and third is None:
+        if other is not None and third is None: # si el gap es entre el ultimo avion y las 100 mn
             distancia_gap = 100.0 - other.x
             if distancia_gap >= (self.v / 60.0) * 10.0:
                 punto_medio = other.x + distancia_gap / 2.0
@@ -185,12 +175,10 @@ class Plane:
                     self.x = punto_medio
                     self.status = "reinsercion"
                     self.set_speed()
-        # si no hay referencias, no reinsertar
     
     # setea el avion como desacelerando
     def set_desacelerando(self,other) -> None:
-        if other is None:
-            # si no hay avion de adelante, no se puede desacelerar
+        if other is None: # si no hay avion de adelante, no se puede ni se debe desacelerar
             return
         
         # desacelerar a 20 nudos menos que el avion de adelante
@@ -204,14 +192,14 @@ class Plane:
             self.status = "desacelerando"
             self.time_to_arrive()
     
-    #  funcion para desviar al avion, no avanzo porque en la primera que gira no puede avanzar
+    #  funcion para desviar al avion
     def set_desviado(self) -> None:
         self.status = "desviado"
         self.v = 200
-        self.tiempo_estimado = -1 # Pongo en -1 porque no se pouede calcular cuanto va a tardar
+        self.tiempo_estimado = -1 # -1 porque no se puede calcular cuanto va a tardar
     
+    # aplica micro-ajuste de velocidad vs STA si el protocolo nuevo (ejercicio 7) está activo.
     def apply_metering(self, now_min: int):
-        """Aplica micro-ajuste de velocidad vs STA si el protocolo nuevo está activo."""
         if not self.metering or self.sta_meter is None:
             return
         if self.status in {"desviado", "aterrizado"}:
